@@ -264,6 +264,11 @@ def generate_final_page(csv_filename, output_filename):
             .info-area {{ width: 100%; height: auto; border-right: none; border-bottom: 1px solid #ddd; }}
             .map-area {{ height: 400px; }}
         }}
+        
+        /* [중요] 캘린더 스크롤 제거를 위한 스타일 */
+        .fc-scroller {{
+            overflow: hidden !important;
+        }}
     </style>
 </head>
 <body>
@@ -323,6 +328,8 @@ def generate_final_page(csv_filename, output_filename):
             height: '100%',
             headerToolbar: {{ left: 'prev,next today', center: 'title', right: '' }},
             events: getAllCalendarEvents(),
+            dayMaxEvents: true, // [중요] 일정 많아도 스크롤 안 생기게 압축 표시 (+more)
+            expandRows: true, // 화면 높이에 맞춰 행 높이 자동 조절
             eventClick: function(info) {{
                 selectEvent(parseInt(info.event.id));
             }}
@@ -352,9 +359,10 @@ def generate_final_page(csv_filename, output_filename):
             card.className = 'event-card';
             card.dataset.id = evt.id;
             card.onclick = () => selectEvent(evt.id);
+            // [수정] 시작 날짜 ~ 종료 날짜 모두 표시하도록 변경
             card.innerHTML = `
                 <div class="card-title">${{evt.title}}</div>
-                <div class="card-date">🗓️ ${{evt.start}}</div>
+                <div class="card-date">🗓️ ${{evt.start}} ~ ${{evt.end}}</div>
                 <div class="card-loc">📍 ${{evt.location_text}}</div>
             `;
             container.appendChild(card);
