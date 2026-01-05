@@ -6,17 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BanG Dream! 한국 오프라인 이벤트 목록</title>
     
-    <!-- FullCalendar (달력 라이브러리) -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
-    
-    <!-- Leaflet (무료 지도 라이브러리) CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         :root { 
             --bg: #f4f6f8; 
-            --accent: #ff4081; /* 아야 핑크 */
+            --accent: #ff4081; 
             --dark: #333; 
             --gray: #b0b0b0;
         }
@@ -30,7 +27,6 @@
             color: var(--dark); 
         }
         
-        /* [왼쪽 패널] 50% 차지 + Flex Layout */
         .left-panel { 
             width: 50%; 
             padding: 25px; 
@@ -38,7 +34,7 @@
             border-right: 1px solid #e0e0e0; 
             box-sizing: border-box;
             display: flex;
-            flex-direction: column; /* 세로 정렬 */
+            flex-direction: column;
             z-index: 10;
         }
         
@@ -51,7 +47,6 @@
             flex-shrink: 0; 
         }
         
-        /* 카드 리스트 컨테이너 (남은 공간 차지 + 스크롤) */
         .card-list-container {
             flex: 1; 
             overflow-y: auto; 
@@ -60,24 +55,20 @@
 
         #card-list {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* 2열 배치 */
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
         }
 
-        /* 제작자 크레딧 푸터 */
         .footer-credits {
             text-align: center;
             font-size: 0.85rem;
             color: #999;
             padding-top: 20px;
-            margin-top: auto; /* 바닥에 고정 */
+            margin-top: auto;
             font-weight: 500;
-            letter-spacing: 0.5px;
-            flex-shrink: 0;
-            font-family: 'Courier New', monospace; /* 약간 코드 느낌 */
+            font-family: 'Courier New', monospace;
         }
 
-        /* 카드 스타일 */
         .event-card {
             background: #ffffff; 
             border: 1px solid #eee; 
@@ -100,34 +91,30 @@
             background: #fff0f5; 
         }
         
-        .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; line-height: 1.3; word-break: keep-all; }
+        .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; word-break: keep-all; }
         .card-date { font-size: 0.85rem; color: #666; margin-bottom: 5px; }
         .card-loc { font-size: 0.85rem; color: #555; font-weight: 500; }
 
-        /* [오른쪽 패널] 50% */
         .right-panel { 
             width: 50%; 
             display: flex; 
             flex-direction: column; 
         }
         
-        /* 오른쪽 상단: 달력 (45%) */
         .top-calendar { 
             height: 45%; 
             padding: 20px; 
             background: #fff; 
             border-bottom: 1px solid #ddd; 
-            overflow: hidden; /* 달력 컨테이너는 고정하되, 내부는 스크롤 됨 */
+            overflow: hidden;
         }
         
-        /* 오른쪽 하단: 컨테이너 (55%) */
         .bottom-container { 
             height: 55%; 
             display: flex; 
             background: #fff; 
         }
 
-        /* 오른쪽 하단 - 정보창 (왼쪽 고정폭) */
         .info-area {
             width: 340px; 
             min-width: 300px; 
@@ -139,16 +126,14 @@
             background: #fcfcfc;
         }
         
-        /* 오른쪽 하단 - 지도 (나머지 채움) */
         .map-area { 
             flex: 1; 
             position: relative; 
         }
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        /* 정보창 내부 스타일 */
         .panel-header { font-size: 1.4rem; font-weight: 800; margin-bottom: 15px; color: var(--accent); line-height: 1.2; }
-        .empty-msg { color: #999; text-align: center; margin-top: 50px; font-size: 1rem; }
+        .empty-msg { color: #999; text-align: center; margin-top: 50px; }
         
         .btn-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
         .btn { 
@@ -160,7 +145,7 @@
         .btn-naver { background-color: #03C75A; }
         .btn-kakao { background-color: #FEE500; color: #191919; }
         
-        .note-text { font-size: 0.9rem; background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; line-height: 1.4; margin-bottom: 15px; }
+        .note-text { font-size: 0.9rem; background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
         
         .btn-super-main {
             display: block; width: 100%; box-sizing: border-box; text-align: center; 
@@ -172,7 +157,6 @@
         }
         .btn-super-main:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(233, 30, 99, 0.3); }
 
-        /* 모바일 대응 */
         @media (max-width: 900px) {
             body { flex-direction: column; overflow: auto; }
             .left-panel, .right-panel { width: 100%; height: auto; }
@@ -186,29 +170,20 @@
 </head>
 <body>
 
-<!-- 왼쪽 패널 -->
 <div class="left-panel">
     <h1 class="page-title">BanG Dream!<br>한국 오프라인 이벤트 목록</h1>
-    
-    <!-- 스크롤 되는 카드 리스트 영역 -->
     <div class="card-list-container">
         <div id="card-list"></div>
     </div>
-
-    <!-- 제작자 크레딧 푸터 -->
     <div class="footer-credits">
         made by Bangbung Kim
     </div>
 </div>
 
-<!-- 오른쪽 패널 -->
 <div class="right-panel">
-    <!-- 상단: 달력 -->
     <div class="top-calendar">
         <div id='calendar'></div>
     </div>
-    
-    <!-- 하단: 정보 + 지도 -->
     <div class="bottom-container">
         <div class="info-area" id="info-panel">
             <div class="empty-msg">
@@ -222,37 +197,31 @@
 </div>
 
 <script>
-    const events = [{"id": 0, "title": "로젤리아 내한공연 기념 지하철 광고", "start": "2025-11-25", "end": "2025-12-31", "cal_end": "2026-01-01", "location_text": "안암역, 홍대입구역", "map_targets": [{"name": "안암역", "n_link": "https://naver.me/x95K7RnH", "k_link": "https://place.map.kakao.com/SES2640", "lat": 37.58645750817225, "lng": 127.02915845433826}, {"name": "홍대입구역", "n_link": "https://naver.me/FpZVriqO", "k_link": "https://place.map.kakao.com/SES3149", "lat": 37.55787506501278, "lng": 126.92529418317213}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5766158", "note": ""}, {"id": 1, "title": "BanG Dream! 10주년의 궤적展", "start": "2025-12-04", "end": "2026-02-01", "cal_end": "2026-02-02", "location_text": "AK플라자 3층 Space Galleria", "map_targets": [{"name": "AK플라자 3층 Space Galleria", "n_link": "https://naver.me/56R6OZp0", "k_link": "https://place.map.kakao.com/1156421273", "lat": 37.55800358022958, "lng": 126.92646032734649}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5757227", "note": ""}, {"id": 2, "title": "10주년 전시회 그라떼", "start": "2025-12-04", "end": "2026-01-18", "cal_end": "2026-01-19", "location_text": "animate cafe 홍대점, 잠실롯데점", "map_targets": [{"name": "animate cafe 홍대점", "n_link": "https://naver.me/GG7tdmN3", "k_link": "https://place.map.kakao.com/1569179864", "lat": 37.558246784781225, "lng": 126.92608361200716}, {"name": "잠실롯데점", "n_link": "https://naver.me/xS1FI9HO", "k_link": "https://place.map.kakao.com/1680392963", "lat": 37.516317710608405, "lng": 127.10478947576965}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5760244", "note": ""}, {"id": 3, "title": "10주년 전시회 X 그라떼 이벤트", "start": "2025-12-04", "end": "2025-12-31", "cal_end": "2026-01-01", "location_text": "AK플라자 3층 Space Galleria", "map_targets": [{"name": "AK플라자 3층 Space Galleria", "n_link": "https://naver.me/56R6OZp0", "k_link": "https://place.map.kakao.com/1156421273", "lat": 37.55800358022958, "lng": 126.92646032734649}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5773553", "note": "없어지는 대로 종료"}, {"id": 4, "title": "10주년 전시회 광고 인증샷 이벤트", "start": "2025-12-08", "end": "2025-12-21", "cal_end": "2025-12-22", "location_text": "AK플라자 3층 Space Galleria", "map_targets": [{"name": "AK플라자 3층 Space Galleria", "n_link": "https://naver.me/56R6OZp0", "k_link": "https://place.map.kakao.com/1156421273", "lat": 37.55800358022958, "lng": 126.92646032734649}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5784857", "note": ""}, {"id": 5, "title": "BanG Dream! Roselia ASIA TOUR in animate", "start": "2025-12-10", "end": "2025-01-25", "cal_end": "2025-01-26", "location_text": "animate 홍대점, 잠실롯데점, 부산점, 온라인샵", "map_targets": [{"name": "animate 홍대점", "n_link": "https://naver.me/GG7tdmN3", "k_link": "https://place.map.kakao.com/1569179864", "lat": 37.55818454896633, "lng": 126.92617941385133}, {"name": "잠실롯데점", "n_link": "https://naver.me/xS1FI9HO", "k_link": "https://place.map.kakao.com/1680392963", "lat": 37.51388178795134, "lng": 127.10376405064737}, {"name": "부산점", "n_link": "https://naver.me/G65tVa3l", "k_link": "https://place.map.kakao.com/1952409629", "lat": 35.153133170168324, "lng": 129.05952158124504}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5785195", "note": ""}, {"id": 6, "title": "서울코믹월드", "start": "2025-12-20", "end": "2025-12-21", "cal_end": "2025-12-22", "location_text": "고양 킨텍스 1전시관", "map_targets": [{"name": "고양 킨텍스 1전시관", "n_link": "https://naver.me/xKERd3MA", "k_link": "https://place.map.kakao.com/11373858", "lat": 37.66975449439994, "lng": 126.7449148680072}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5788852", "note": ""}, {"id": 7, "title": "그라떼 로젤 내한기념", "start": "2025-12-20", "end": "2026-01-25", "cal_end": "2026-01-26", "location_text": "animate cafe 홍대점, 잠실롯데점", "map_targets": [{"name": "animate cafe 홍대점", "n_link": "https://naver.me/GG7tdmN3", "k_link": "https://place.map.kakao.com/1569179864", "lat": 37.55818454896633, "lng": 126.92617941385133}, {"name": "잠실롯데점", "n_link": "https://naver.me/xS1FI9HO", "k_link": "https://place.map.kakao.com/1680392963", "lat": 37.51388178795134, "lng": 127.10376405064737}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5746277", "note": "쿠키는 홍대점 한정이니 유의"}, {"id": 8, "title": "10주년 전시회 크리스마스 이벤트", "start": "2025-12-20", "end": "2025-12-26", "cal_end": "2025-12-27", "location_text": "AK플라자 3층 Space Galleria", "map_targets": [{"name": "AK플라자 3층 Space Galleria", "n_link": "https://naver.me/56R6OZp0", "k_link": "https://place.map.kakao.com/1156421273", "lat": 37.55800358022958, "lng": 126.92646032734649}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5801795", "note": ""}, {"id": 9, "title": "로젤리아 아시아투어 Neuweltfahrt 서울 공연", "start": "2025-12-24", "end": "2025-12-24", "cal_end": "2025-12-25", "location_text": "고려대학교 화정체육관", "map_targets": [{"name": "고려대학교 화정체육관", "n_link": "https://naver.me/GdymhkvA", "k_link": "https://place.map.kakao.com/13314631", "lat": 37.59288189776369, "lng": 127.02475154084323}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5599446", "note": ""}, {"id": 10, "title": "「BanG Dream! Ave Mujica」콜라보 카페", "start": "2026-01-08", "end": "2026-02-08", "cal_end": "2026-02-09", "location_text": "애니플러스 합정, 서면점", "map_targets": [{"name": "애니플러스 합정", "n_link": "https://naver.me/G2EwHi2N", "k_link": "https://place.map.kakao.com/577828045", "lat": 37.55074727367116, "lng": 126.91162102550213}, {"name": "서면점", "n_link": "https://naver.me/G2EwxwKT", "k_link": "https://place.map.kakao.com/1789799749", "lat": 35.153170546784594, "lng": 129.0595959830892}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5805552", "note": ""}, {"id": 11, "title": "뱅드림 커버라이브 Winter BANG", "start": "2026-01-17", "end": "2026-01-17", "cal_end": "2026-01-18", "location_text": "대전 음악창작소", "map_targets": [{"name": "대전 음악창작소", "n_link": "https://naver.me/FQVGOaxh", "k_link": "https://place.map.kakao.com/613163072", "lat": 36.326449672341255, "lng": 127.43034269662424}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5762185", "note": ""}, {"id": 12, "title": "포피로젤마이무지 커버밴드 공연", "start": "2026-01-25", "end": "2026-01-25", "cal_end": "2026-01-26", "location_text": "합정 드림홀", "map_targets": [{"name": "합정 드림홀", "n_link": "https://naver.me/F5D17C3d", "k_link": "https://place.map.kakao.com/26490207", "lat": 37.55051169818805, "lng": 126.91581415433701}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5805209", "note": ""}, {"id": 13, "title": "2026 레이야 생일기념 광고", "start": "2026-01-12", "end": "2026-02-10", "cal_end": "2026-02-11", "location_text": "잠실역 8호선 석촌 방면(승강장 양쪽 계단 사이 전광판)", "map_targets": [{"name": "잠실역 8호선 석촌 방면(승강장 양쪽 계단 사이 전광판)", "n_link": "https://naver.me/Fm2gWbIO", "k_link": "https://place.map.kakao.com/SES2815", "lat": 37.51440119622173, "lng": 127.10316850297033}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5843113", "note": "석촌 방면 (승강장 양쪽 계단 사이 전광판)"}];
+    const events = [{"id": 1, "title": "BanG Dream! 10주년의 궤적展", "start": "2025-12-04", "end": "2026-02-01", "cal_end": "2026-02-02", "location_text": "AK플라자 3층 Space Galleria", "map_targets": [{"name": "AK플라자 3층 Space Galleria", "n_link": "https://naver.me/56R6OZp0", "k_link": "https://place.map.kakao.com/1156421273", "lat": 37.55800358022958, "lng": 126.92646032734649}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5757227", "note": ""}, {"id": 2, "title": "10주년 전시회 그라떼", "start": "2025-12-04", "end": "2026-01-18", "cal_end": "2026-01-19", "location_text": "animate cafe 홍대점, 잠실롯데점", "map_targets": [{"name": "animate cafe 홍대점", "n_link": "https://naver.me/GG7tdmN3", "k_link": "https://place.map.kakao.com/1569179864", "lat": 37.558246784781225, "lng": 126.92608361200716}, {"name": "잠실롯데점", "n_link": "https://naver.me/xS1FI9HO", "k_link": "https://place.map.kakao.com/1680392963", "lat": 37.516317710608405, "lng": 127.10478947576965}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5760244", "note": ""}, {"id": 7, "title": "그라떼 로젤 내한기념", "start": "2025-12-20", "end": "2026-01-25", "cal_end": "2026-01-26", "location_text": "animate cafe 홍대점, 잠실롯데점", "map_targets": [{"name": "animate cafe 홍대점", "n_link": "https://naver.me/GG7tdmN3", "k_link": "https://place.map.kakao.com/1569179864", "lat": 37.55818454896633, "lng": 126.92617941385133}, {"name": "잠실롯데점", "n_link": "https://naver.me/xS1FI9HO", "k_link": "https://place.map.kakao.com/1680392963", "lat": 37.51388178795134, "lng": 127.10376405064737}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5746277", "note": "쿠키는 홍대점 한정이니 유의"}, {"id": 10, "title": "「BanG Dream! Ave Mujica」콜라보 카페", "start": "2026-01-08", "end": "2026-02-08", "cal_end": "2026-02-09", "location_text": "애니플러스 합정, 서면점", "map_targets": [{"name": "애니플러스 합정", "n_link": "https://naver.me/G2EwHi2N", "k_link": "https://place.map.kakao.com/577828045", "lat": 37.55074727367116, "lng": 126.91162102550213}, {"name": "서면점", "n_link": "https://naver.me/G2EwxwKT", "k_link": "https://place.map.kakao.com/1789799749", "lat": 35.153170546784594, "lng": 129.0595959830892}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5805552", "note": ""}, {"id": 11, "title": "뱅드림 커버라이브 Winter BANG", "start": "2026-01-17", "end": "2026-01-17", "cal_end": "2026-01-18", "location_text": "대전 음악창작소", "map_targets": [{"name": "대전 음악창작소", "n_link": "https://naver.me/FQVGOaxh", "k_link": "https://place.map.kakao.com/613163072", "lat": 36.326449672341255, "lng": 127.43034269662424}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5762185", "note": ""}, {"id": 12, "title": "포피로젤마이무지 커버밴드 공연", "start": "2026-01-25", "end": "2026-01-25", "cal_end": "2026-01-26", "location_text": "합정 드림홀", "map_targets": [{"name": "합정 드림홀", "n_link": "https://naver.me/F5D17C3d", "k_link": "https://place.map.kakao.com/26490207", "lat": 37.55051169818805, "lng": 126.91581415433701}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5805209", "note": ""}, {"id": 13, "title": "2026 레이야 생일기념 광고", "start": "2026-01-12", "end": "2026-02-10", "cal_end": "2026-02-11", "location_text": "잠실역 8호선 석촌 방면(승강장 양쪽 계단 사이 전광판)", "map_targets": [{"name": "잠실역 8호선 석촌 방면(승강장 양쪽 계단 사이 전광판)", "n_link": "https://naver.me/Fm2gWbIO", "k_link": "https://place.map.kakao.com/SES2815", "lat": 37.51440119622173, "lng": 127.10316850297033}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5843113", "note": "석촌 방면 (승강장 양쪽 계단 사이 전광판)"}, {"id": 14, "title": "[모금] 민트자매 전광판 프로젝트", "start": "2026-01-01", "end": "2026-02-10", "cal_end": "2026-02-11", "location_text": "공항철도 홍대입구역", "map_targets": [{"name": "공항철도 홍대입구역", "n_link": "https://naver.me/FpZVriqO", "k_link": "https://place.map.kakao.com/SES3149", "lat": 37.55788357016835, "lng": 126.92526199666752}], "main_link": "https://gall.dcinside.com/mgallery/board/view/?id=bang_dream&no=5844984", "note": "종료 시기와 설치 장소는 변동 가능 (할거면 최대한 빨리 하세요)"}];
     let map = null;
     let calendar = null;
     let markers = [];
 
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. 지도 초기화 (서울 중심)
         map = L.map('map').setView([37.5665, 126.9780], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 2. 달력 초기화
         const calendarEl = document.getElementById('calendar');
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             height: '100%',
             headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
             events: getAllCalendarEvents(),
-            // [복구] 스크롤 기능 복구 (dayMaxEvents 제거)
             eventClick: function(info) {
                 selectEvent(parseInt(info.event.id));
             }
         });
         calendar.render();
-
-        // 3. 카드 리스트 생성
         renderCards();
     });
 
-    // 초기 캘린더 이벤트 로드 (기본 회색)
     function getAllCalendarEvents() {
         return events.map(e => ({
             id: e.id, 
@@ -263,7 +232,6 @@
         }));
     }
 
-    // 카드 HTML 생성
     function renderCards() {
         const container = document.getElementById('card-list');
         events.forEach(evt => {
@@ -271,7 +239,6 @@
             card.className = 'event-card';
             card.dataset.id = evt.id;
             card.onclick = () => selectEvent(evt.id);
-            // 시작 날짜 ~ 종료 날짜 모두 표시
             card.innerHTML = `
                 <div class="card-title">${evt.title}</div>
                 <div class="card-date">🗓️ ${evt.start} ~ ${evt.end}</div>
@@ -281,28 +248,21 @@
         });
     }
 
-    // [핵심] 이벤트 선택 시 동작
     function selectEvent(id) {
         const evt = events.find(e => e.id === id);
-
-        // 1. 카드 스타일 활성화
         document.querySelectorAll('.event-card').forEach(c => c.classList.remove('active'));
         document.querySelector(`.event-card[data-id="${id}"]`)?.classList.add('active');
 
-        // 2. 달력 하이라이트 (선택: 핑크, 나머지: 회색)
         const allCalEvents = calendar.getEvents();
         allCalEvents.forEach(calEvt => {
             if (parseInt(calEvt.id) === id) {
                 calEvt.setProp('color', '#ff4081');
-                calEvt.setProp('display', 'auto');
             } else {
                 calEvt.setProp('color', '#d1d1d1');
-                calEvt.setProp('display', 'auto');
             }
         });
         calendar.gotoDate(evt.start);
 
-        // 3. 지도 마커 업데이트
         markers.forEach(m => map.removeLayer(m));
         markers = [];
         let bounds = L.latLngBounds();
@@ -318,7 +278,6 @@
             }
         });
 
-        // 지도 뷰 조정 (약간의 딜레이로 렌더링 안정화)
         setTimeout(() => {
             map.invalidateSize();
             if (hasCoords) {
@@ -326,10 +285,10 @@
             }
         }, 100);
 
-        // 4. 정보창 패널 업데이트
         const panel = document.getElementById('info-panel');
-        
         let btnsHtml = '<div class="btn-group">';
+        
+        // [중요] f-string 내부에서 JS if문 사용 시 중괄호 2개 필수
         evt.map_targets.forEach(target => {
             const zoomAttr = (target.lat && target.lng) 
                 ? `onclick="zoomToLocation(${target.lat}, ${target.lng})"` 
@@ -338,21 +297,15 @@
             if (target.n_link) {
                 btnsHtml += `<a href="${target.n_link}" target="_blank" class="btn btn-naver" ${zoomAttr}><span>N 네이버지도 (${target.name})</span> <span>➚</span></a>`;
             }
+            
             if (target.k_link) {
                 btnsHtml += `<a href="${target.k_link}" target="_blank" class="btn btn-kakao" ${zoomAttr}><span>K 카카오맵 (${target.name})</span> <span>➚</span></a>`;
             }
         });
         btnsHtml += '</div>';
 
-        let noteHtml = '';
-        if (evt.note) {
-            noteHtml = `<div class="note-text">📢 ${evt.note}</div>`;
-        }
-
-        let mainLinkHtml = '';
-        if (evt.main_link) {
-            mainLinkHtml = `<a href="${evt.main_link}" target="_blank" class="btn btn-super-main">👉 통합 정보 확인하기</a>`;
-        }
+        let noteHtml = evt.note ? `<div class="note-text">📢 ${evt.note}</div>` : '';
+        let mainLinkHtml = evt.main_link ? `<a href="${evt.main_link}" target="_blank" class="btn btn-super-main">👉 통합 정보 확인하기</a>` : '';
 
         panel.innerHTML = `
             <div class="panel-header">${evt.title}</div>
@@ -362,11 +315,9 @@
         `;
     }
 
-    // 지도 줌 기능
     function zoomToLocation(lat, lng) {
         map.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
     }
 </script>
-
 </body>
 </html>
