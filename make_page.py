@@ -4,14 +4,19 @@ from datetime import datetime, timedelta
 
 def generate_final_page(csv_filename, output_filename):
     events_data = []
-    # 오늘 날짜 확인 (시간 제외, 날짜만 비교)
-    today = datetime.now().date()
+    
+    # 1. 현재 시간 및 날짜 구하기
+    now = datetime.now()
+    today = now.date()
+    
+    # HTML에 표시할 포맷팅된 현재 시간 (예: 2024.01.18 14:30:00)
+    current_time_str = now.strftime("%Y.%m.%d %H:%M:%S")
 
     try:
         with open(csv_filename, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for idx, row in enumerate(reader):
-                # 1. 기본 데이터 파싱
+                # 기본 데이터 파싱
                 title = row.get('이벤트명', '')
                 start = row.get('시작기간', '').strip()
                 end = row.get('종료기간', '').strip()
@@ -19,25 +24,26 @@ def generate_final_page(csv_filename, output_filename):
                 main_link = row.get('통합정보모음', '')
                 note = row.get('비고', '')
 
-                # 2. 날짜 필터링 및 포맷팅
+                # 날짜 필터링 및 포맷팅
                 try:
                     # 문자열을 날짜 객체로 변환
                     end_date_obj = datetime.strptime(end, "%Y-%m-%d").date()
                     
-                    # [핵심] 종료일이 오늘보다 이전(과거)이면 데이터에서 제외
+                    # [핵심 로직] 종료일이 오늘보다 이전(과거)이면 데이터에서 제외
+                    # CSV에 시간(시:분)이 없으므로, 날짜 기준으로 어제 이전에 끝난 것을 제외합니다.
                     if end_date_obj < today:
                         continue
                         
                     # FullCalendar용 종료일 계산 (표시일 + 1일)
                     cal_end = (end_date_obj + timedelta(days=1)).strftime("%Y-%m-%d")
                 except ValueError:
-                    # 날짜 형식이 올바르지 않으면 해당 데이터는 스킵하거나 원본 유지
+                    # 날짜 형식이 올바르지 않으면 원본 유지 (안전장치)
                     cal_end = end
 
-                # 3. 장소 이름 분리
+                # 장소 이름 분리
                 loc_names = [x.strip() for x in raw_location.split(',')]
 
-                # 4. 좌표 데이터 처리
+                # 좌표 데이터 처리
                 coords = []
                 for i in range(1, 4):
                     c_str = row.get(f'좌표{i}', '').strip()
@@ -50,7 +56,7 @@ def generate_final_page(csv_filename, output_filename):
                     else:
                         coords.append(None)
 
-                # 5. 지도 타겟 매핑
+                # 지도 타겟 매핑
                 map_targets = []
                 for i in range(3):
                     loc_name = loc_names[i] if i < len(loc_names) else (loc_names[0] if loc_names else f"장소{i+1}")
@@ -86,7 +92,7 @@ def generate_final_page(csv_filename, output_filename):
     # Python 데이터를 JSON 문자열로 변환
     json_data = json.dumps(events_data, ensure_ascii=False)
 
-    # HTML 생성 (f-string 사용 시 중괄호 {{ }} 이중 처리 주의)
+    # HTML 생성
     html = f"""
 <!DOCTYPE html>
 <html lang="ko">
@@ -150,11 +156,12 @@ def generate_final_page(csv_filename, output_filename):
 
         .footer-credits {{
             text-align: center;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #999;
             padding-top: 20px;
             margin-top: auto;
             font-weight: 500;
+            line-height: 1.4;
             font-family: 'Courier New', monospace;
         }}
 
@@ -265,6 +272,7 @@ def generate_final_page(csv_filename, output_filename):
         <div id="card-list"></div>
     </div>
     <div class="footer-credits">
+        현재시간: {current_time_str}<br>
         made by Bangbung Kim
     </div>
 </div>
@@ -377,7 +385,6 @@ def generate_final_page(csv_filename, output_filename):
         const panel = document.getElementById('info-panel');
         let btnsHtml = '<div class="btn-group">';
         
-        // [중요] f-string 내부에서 JS if문 사용 시 중괄호 2개 필수
         evt.map_targets.forEach(target => {{
             const zoomAttr = (target.lat && target.lng) 
                 ? `onclick="zoomToLocation(${{target.lat}}, ${{target.lng}})"` 
@@ -414,7 +421,7 @@ def generate_final_page(csv_filename, output_filename):
 
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f"'{output_filename}' 생성 완료. 종료된 이벤트가 제외되었습니다.")
+    print(f"'{output_filename}' 생성 완료. (업데이트 시간: {current_time_str})")
 
 if __name__ == "__main__":
     generate_final_page('events.csv', 'index.html')
