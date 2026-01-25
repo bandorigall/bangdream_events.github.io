@@ -5,11 +5,8 @@ from datetime import datetime, timedelta
 def generate_final_page(csv_filename, output_filename):
     events_data = []
     
-    # 1. 현재 시간 및 날짜 구하기
+    # 1. 현재 시간 (생성 시점 기록용)
     now = datetime.now()
-    today = now.date()
-    
-    # HTML에 표시할 포맷팅된 현재 시간 (예: 2024.01.18 14:30:00)
     current_time_str = now.strftime("%Y.%m.%d %H:%M:%S")
 
     try:
@@ -24,26 +21,20 @@ def generate_final_page(csv_filename, output_filename):
                 main_link = row.get('통합정보모음', '')
                 note = row.get('비고', '')
 
-                # 날짜 필터링 및 포맷팅
+                # 날짜 포맷팅 및 FullCalendar용 종료일 계산
                 try:
-                    # 문자열을 날짜 객체로 변환
                     end_date_obj = datetime.strptime(end, "%Y-%m-%d").date()
                     
-                    # [핵심 로직] 종료일이 오늘보다 이전(과거)이면 데이터에서 제외
-                    # CSV에 시간(시:분)이 없으므로, 날짜 기준으로 어제 이전에 끝난 것을 제외합니다.
-                    if end_date_obj < today:
-                        continue
-                        
-                    # FullCalendar용 종료일 계산 (표시일 + 1일)
+                    # [변경점] Python에서의 날짜 필터링 로직을 삭제했습니다.
+                    # 과거 이벤트도 모두 포함하여 HTML로 보냅니다.
+                    
+                    # FullCalendar용 종료일 (표시일 + 1일)
                     cal_end = (end_date_obj + timedelta(days=1)).strftime("%Y-%m-%d")
                 except ValueError:
-                    # 날짜 형식이 올바르지 않으면 원본 유지 (안전장치)
                     cal_end = end
 
-                # 장소 이름 분리
+                # 장소 이름 및 좌표 처리 (기존 로직 동일)
                 loc_names = [x.strip() for x in raw_location.split(',')]
-
-                # 좌표 데이터 처리
                 coords = []
                 for i in range(1, 4):
                     c_str = row.get(f'좌표{i}', '').strip()
@@ -56,7 +47,6 @@ def generate_final_page(csv_filename, output_filename):
                     else:
                         coords.append(None)
 
-                # 지도 타겟 매핑
                 map_targets = []
                 for i in range(3):
                     loc_name = loc_names[i] if i < len(loc_names) else (loc_names[0] if loc_names else f"장소{i+1}")
@@ -89,10 +79,11 @@ def generate_final_page(csv_filename, output_filename):
         print("오류: CSV 파일을 찾을 수 없습니다.")
         return
 
-    # Python 데이터를 JSON 문자열로 변환
+    # JSON 데이터 생성
     json_data = json.dumps(events_data, ensure_ascii=False)
 
     # HTML 생성
+    # [변경점] 자바스크립트 부분에 filterEventsLogic 함수가 추가되었습니다.
     html = f"""
 <!DOCTYPE html>
 <html lang="ko">
@@ -272,7 +263,8 @@ def generate_final_page(csv_filename, output_filename):
         <div id="card-list"></div>
     </div>
     <div class="footer-credits">
-        현재시간: {current_time_str}<br>
+        데이터 업데이트: {current_time_str}<br>
+        (접속일 기준 지난 행사는 숨김 처리됨)<br>
         made by Bangbung Kim
     </div>
 </div>
@@ -294,12 +286,20 @@ def generate_final_page(csv_filename, output_filename):
 </div>
 
 <script>
-    const events = {json_data};
+    // 1. Python에서 모든 데이터(과거+미래)를 rawEvents에 담습니다.
+    const rawEvents = {json_data};
+    
+    // 2. 현재 접속한 시간을 기준으로 필터링된 이벤트만 담을 변수
+    let events = [];
+    
     let map = null;
     let calendar = null;
     let markers = [];
 
     document.addEventListener('DOMContentLoaded', function() {{
+        // [핵심 로직] 접속 시점(Client Side) 날짜 필터링 실행
+        filterEventsByCurrentDate();
+
         map = L.map('map').setView([37.5665, 126.9780], 11);
         L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
             attribution: '© OpenStreetMap'
@@ -319,7 +319,24 @@ def generate_final_page(csv_filename, output_filename):
         renderCards();
     }});
 
+    // 접속한 사용자의 로컬 시간을 기준으로 지난 이벤트를 제외하는 함수
+    function filterEventsByCurrentDate() {{
+        const now = new Date();
+        // 시간을 00:00:00으로 초기화하여 날짜만 비교 (오늘 종료되는 이벤트도 보이게 함)
+        now.setHours(0, 0, 0, 0);
+
+        events = rawEvents.filter(evt => {{
+            // evt.end는 'YYYY-MM-DD' 형식이므로 Date 객체로 변환
+            const endDate = new Date(evt.end);
+            // 종료일이 오늘과 같거나 미래인 경우만 유지
+            return endDate >= now;
+        }});
+        
+        console.log(`총 ${{rawEvents.length}}개 중 ${{events.length}}개의 유효 이벤트 로드됨.`);
+    }}
+
     function getAllCalendarEvents() {{
+        // events 변수는 이미 필터링된 리스트입니다.
         return events.map(e => ({{
             id: e.id, 
             title: e.title, 
@@ -331,6 +348,13 @@ def generate_final_page(csv_filename, output_filename):
 
     function renderCards() {{
         const container = document.getElementById('card-list');
+        container.innerHTML = ''; // 초기화
+        
+        if (events.length === 0) {{
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">진행 중인 이벤트가 없습니다.</div>';
+            return;
+        }}
+
         events.forEach(evt => {{
             const card = document.createElement('div');
             card.className = 'event-card';
@@ -346,7 +370,10 @@ def generate_final_page(csv_filename, output_filename):
     }}
 
     function selectEvent(id) {{
+        // 필터링된 events 목록에서 찾음
         const evt = events.find(e => e.id === id);
+        if (!evt) return; // 혹시 필터링된 이벤트를 클릭했다면 무시
+
         document.querySelectorAll('.event-card').forEach(c => c.classList.remove('active'));
         document.querySelector(`.event-card[data-id="${{id}}"]`)?.classList.add('active');
 
@@ -421,7 +448,7 @@ def generate_final_page(csv_filename, output_filename):
 
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f"'{output_filename}' 생성 완료. (업데이트 시간: {current_time_str})")
+    print(f"'{output_filename}' 생성 완료. (데이터 업데이트 시간: {current_time_str})")
 
 if __name__ == "__main__":
     generate_final_page('events.csv', 'index.html')
