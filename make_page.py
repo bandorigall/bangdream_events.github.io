@@ -9,81 +9,84 @@ def generate_final_page(csv_filename, output_filename):
     now = datetime.now()
     current_time_str = now.strftime("%Y.%m.%d %H:%M:%S")
 
+    raw_rows = []
     try:
         with open(csv_filename, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
-            for idx, row in enumerate(reader):
-                # 기본 데이터 파싱
-                title = row.get('이벤트명', '')
-                start = row.get('시작기간', '').strip()
-                end = row.get('종료기간', '').strip()
-                raw_location = row.get('장소', '')
-                main_link = row.get('통합정보모음', '')
-                note = row.get('비고', '')
-
-                # 날짜 포맷팅 및 FullCalendar용 종료일 계산
-                try:
-                    end_date_obj = datetime.strptime(end, "%Y-%m-%d").date()
-                    
-                    # [변경점] Python에서의 날짜 필터링 로직을 삭제했습니다.
-                    # 과거 이벤트도 모두 포함하여 HTML로 보냅니다.
-                    
-                    # FullCalendar용 종료일 (표시일 + 1일)
-                    cal_end = (end_date_obj + timedelta(days=1)).strftime("%Y-%m-%d")
-                except ValueError:
-                    cal_end = end
-
-                # 장소 이름 및 좌표 처리 (기존 로직 동일)
-                loc_names = [x.strip() for x in raw_location.split(',')]
-                coords = []
-                for i in range(1, 4):
-                    c_str = row.get(f'좌표{i}', '').strip()
-                    if c_str and ',' in c_str:
-                        try:
-                            lat, lng = map(float, c_str.split(','))
-                            coords.append({'lat': lat, 'lng': lng})
-                        except:
-                            coords.append(None)
-                    else:
-                        coords.append(None)
-
-                map_targets = []
-                for i in range(3):
-                    loc_name = loc_names[i] if i < len(loc_names) else (loc_names[0] if loc_names else f"장소{i+1}")
-                    n_link = row.get(f'네이버지도{"" if i==0 else i+1}', '').strip()
-                    k_link = row.get(f'다음지도{"" if i==0 else i+1}', '').strip()
-                    coord = coords[i] if i < len(coords) else None
-
-                    if n_link or k_link or coord:
-                        map_targets.append({
-                            'name': loc_name,
-                            'n_link': n_link,
-                            'k_link': k_link,
-                            'lat': coord['lat'] if coord else None,
-                            'lng': coord['lng'] if coord else None
-                        })
-
-                events_data.append({
-                    'id': idx,
-                    'title': title,
-                    'start': start,
-                    'end': end,
-                    'cal_end': cal_end,
-                    'location_text': raw_location,
-                    'map_targets': map_targets,
-                    'main_link': main_link,
-                    'note': note
-                })
+            for row in reader:
+                raw_rows.append(row)
+        
+        # [정렬 로직] '종료기간' 열을 기준으로 정렬 (오름차순: 가까운 날짜부터)
+        # 날짜 형식이 YYYY-MM-DD라고 가정합니다.
+        raw_rows.sort(key=lambda x: x.get('종료기간', '9999-12-31').strip())
 
     except FileNotFoundError:
         print("오류: CSV 파일을 찾을 수 없습니다.")
         return
 
+    # 정렬된 데이터를 바탕으로 events_data 생성
+    for idx, row in enumerate(raw_rows):
+        title = row.get('이벤트명', '')
+        start = row.get('시작기간', '').strip()
+        end = row.get('종료기간', '').strip()
+        raw_location = row.get('장소', '')
+        main_link = row.get('통합정보모음', '')
+        note = row.get('비고', '')
+
+        # 날짜 포맷팅 및 FullCalendar용 종료일 계산
+        try:
+            end_date_obj = datetime.strptime(end, "%Y-%m-%d").date()
+            # FullCalendar는 종료일을 포함하지 않으므로 하루를 더해줌
+            cal_end = (end_date_obj + timedelta(days=1)).strftime("%Y-%m-%d")
+        except ValueError:
+            cal_end = end
+
+        # 장소 이름 및 좌표 처리
+        loc_names = [x.strip() for x in raw_location.split(',')]
+        coords = []
+        for i in range(1, 4):
+            c_str = row.get(f'좌표{i}', '').strip()
+            if c_str and ',' in c_str:
+                try:
+                    lat, lng = map(float, c_str.split(','))
+                    coords.append({'lat': lat, 'lng': lng})
+                except:
+                    coords.append(None)
+            else:
+                coords.append(None)
+
+        map_targets = []
+        for i in range(3):
+            loc_name = loc_names[i] if i < len(loc_names) else (loc_names[0] if loc_names else f"장소{i+1}")
+            n_link = row.get(f'네이버지도{"" if i==0 else i+1}', '').strip()
+            k_link = row.get(f'다음지도{"" if i==0 else i+1}', '').strip()
+            coord = coords[i] if i < len(coords) else None
+
+            if n_link or k_link or coord:
+                map_targets.append({
+                    'name': loc_name,
+                    'n_link': n_link,
+                    'k_link': k_link,
+                    'lat': coord['lat'] if coord else None,
+                    'lng': coord['lng'] if coord else None
+                })
+
+        events_data.append({
+            'id': idx,
+            'title': title,
+            'start': start,
+            'end': end,
+            'cal_end': cal_end,
+            'location_text': raw_location,
+            'map_targets': map_targets,
+            'main_link': main_link,
+            'note': note
+        })
+
     # JSON 데이터 생성
     json_data = json.dumps(events_data, ensure_ascii=False)
 
     # HTML 생성
-    # [변경점] 자바스크립트 부분에 filterEventsLogic 함수가 추가되었습니다.
     html = f"""
 <!DOCTYPE html>
 <html lang="ko">
@@ -286,18 +289,13 @@ def generate_final_page(csv_filename, output_filename):
 </div>
 
 <script>
-    // 1. Python에서 모든 데이터(과거+미래)를 rawEvents에 담습니다.
     const rawEvents = {json_data};
-    
-    // 2. 현재 접속한 시간을 기준으로 필터링된 이벤트만 담을 변수
     let events = [];
-    
     let map = null;
     let calendar = null;
     let markers = [];
 
     document.addEventListener('DOMContentLoaded', function() {{
-        // [핵심 로직] 접속 시점(Client Side) 날짜 필터링 실행
         filterEventsByCurrentDate();
 
         map = L.map('map').setView([37.5665, 126.9780], 11);
@@ -319,16 +317,12 @@ def generate_final_page(csv_filename, output_filename):
         renderCards();
     }});
 
-    // 접속한 사용자의 로컬 시간을 기준으로 지난 이벤트를 제외하는 함수
     function filterEventsByCurrentDate() {{
         const now = new Date();
-        // 시간을 00:00:00으로 초기화하여 날짜만 비교 (오늘 종료되는 이벤트도 보이게 함)
         now.setHours(0, 0, 0, 0);
 
         events = rawEvents.filter(evt => {{
-            // evt.end는 'YYYY-MM-DD' 형식이므로 Date 객체로 변환
             const endDate = new Date(evt.end);
-            // 종료일이 오늘과 같거나 미래인 경우만 유지
             return endDate >= now;
         }});
         
@@ -336,7 +330,6 @@ def generate_final_page(csv_filename, output_filename):
     }}
 
     function getAllCalendarEvents() {{
-        // events 변수는 이미 필터링된 리스트입니다.
         return events.map(e => ({{
             id: e.id, 
             title: e.title, 
@@ -348,7 +341,7 @@ def generate_final_page(csv_filename, output_filename):
 
     function renderCards() {{
         const container = document.getElementById('card-list');
-        container.innerHTML = ''; // 초기화
+        container.innerHTML = ''; 
         
         if (events.length === 0) {{
             container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">진행 중인 이벤트가 없습니다.</div>';
@@ -370,9 +363,8 @@ def generate_final_page(csv_filename, output_filename):
     }}
 
     function selectEvent(id) {{
-        // 필터링된 events 목록에서 찾음
         const evt = events.find(e => e.id === id);
-        if (!evt) return; // 혹시 필터링된 이벤트를 클릭했다면 무시
+        if (!evt) return;
 
         document.querySelectorAll('.event-card').forEach(c => c.classList.remove('active'));
         document.querySelector(`.event-card[data-id="${{id}}"]`)?.classList.add('active');
