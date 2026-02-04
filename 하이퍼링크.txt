@@ -1,0 +1,4 @@
+<a href="https://bandorigall.github.io/bangdream_events.github.io/" 
+   style="font-size: 24px; font-weight: bold; text-decoration: none; color: #1d2c4d;">
+   (링크) 방갤 한국 오프라인 행사 목록
+</a>
