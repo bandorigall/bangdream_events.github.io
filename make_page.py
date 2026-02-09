@@ -16,8 +16,7 @@ def generate_final_page(csv_filename, output_filename):
             for row in reader:
                 raw_rows.append(row)
         
-        # [정렬 로직] '종료기간' 열을 기준으로 정렬 (오름차순: 가까운 날짜부터)
-        # 날짜 형식이 YYYY-MM-DD라고 가정합니다.
+        # [정렬 로직] '종료기간' 열을 기준으로 정렬
         raw_rows.sort(key=lambda x: x.get('종료기간', '9999-12-31').strip())
 
     except FileNotFoundError:
@@ -33,43 +32,69 @@ def generate_final_page(csv_filename, output_filename):
         main_link = row.get('통합정보모음', '')
         note = row.get('비고', '')
 
-        # 날짜 포맷팅 및 FullCalendar용 종료일 계산
+        # 날짜 포맷팅
         try:
             end_date_obj = datetime.strptime(end, "%Y-%m-%d").date()
-            # FullCalendar는 종료일을 포함하지 않으므로 하루를 더해줌
             cal_end = (end_date_obj + timedelta(days=1)).strftime("%Y-%m-%d")
         except ValueError:
             cal_end = end
 
-        # 장소 이름 및 좌표 처리
+        # -----------------------------------------------------------
+        # [변경됨] JSON 형식의 문자열을 리스트로 변환
+        # -----------------------------------------------------------
+        def safe_json_load(text):
+            if not text or text.strip() == '': return []
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                return []
+
+        naver_links = safe_json_load(row.get('네이버지도', '[]'))
+        kakao_links = safe_json_load(row.get('다음지도', '[]'))
+        coord_strs = safe_json_load(row.get('좌표', '[]'))
+        
+        # 장소 이름 분리
         loc_names = [x.strip() for x in raw_location.split(',')]
-        coords = []
-        for i in range(1, 4):
-            c_str = row.get(f'좌표{i}', '').strip()
-            if c_str and ',' in c_str:
-                try:
-                    lat, lng = map(float, c_str.split(','))
-                    coords.append({'lat': lat, 'lng': lng})
-                except:
-                    coords.append(None)
-            else:
-                coords.append(None)
+
+        # 데이터 중 가장 긴 길이를 기준으로 반복 (링크가 3개면 3번, 1개면 1번)
+        max_len = max(len(naver_links), len(kakao_links), len(coord_strs), len(loc_names), 1)
 
         map_targets = []
-        for i in range(3):
-            loc_name = loc_names[i] if i < len(loc_names) else (loc_names[0] if loc_names else f"장소{i+1}")
-            n_link = row.get(f'네이버지도{"" if i==0 else i+1}', '').strip()
-            k_link = row.get(f'다음지도{"" if i==0 else i+1}', '').strip()
-            coord = coords[i] if i < len(coords) else None
+        
+        for i in range(max_len):
+            # 1. 장소 이름 매칭
+            if i < len(loc_names):
+                loc_name = loc_names[i]
+            else:
+                # 이름이 모자르면 첫 번째 이름을 쓰거나 '장소 N'으로 표기
+                loc_name = loc_names[0] if loc_names else f"장소 {i+1}"
 
-            if n_link or k_link or coord:
+            # 2. 링크 매칭
+            n_link = naver_links[i] if i < len(naver_links) else ''
+            k_link = kakao_links[i] if i < len(kakao_links) else ''
+
+            # 3. 좌표 파싱 (문자열 "37.5, 127.0" -> float 변환)
+            lat, lng = None, None
+            if i < len(coord_strs):
+                c_str = coord_strs[i]
+                if c_str and ',' in c_str:
+                    try:
+                        lat_str, lng_str = c_str.split(',')
+                        lat = float(lat_str)
+                        lng = float(lng_str)
+                    except ValueError:
+                        pass
+
+            # 유효한 정보가 하나라도 있으면 추가
+            if n_link or k_link or (lat and lng):
                 map_targets.append({
                     'name': loc_name,
                     'n_link': n_link,
                     'k_link': k_link,
-                    'lat': coord['lat'] if coord else None,
-                    'lng': coord['lng'] if coord else None
+                    'lat': lat,
+                    'lng': lng
                 })
+        # -----------------------------------------------------------
 
         events_data.append({
             'id': idx,
@@ -86,7 +111,7 @@ def generate_final_page(csv_filename, output_filename):
     # JSON 데이터 생성
     json_data = json.dumps(events_data, ensure_ascii=False)
 
-    # HTML 생성
+    # HTML 생성 (HTML/CSS/JS 부분은 기존과 동일하므로 그대로 유지)
     html = f"""
 <!DOCTYPE html>
 <html lang="ko">
