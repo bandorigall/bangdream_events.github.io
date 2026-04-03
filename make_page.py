@@ -1,6 +1,7 @@
 import csv
 import json
 from datetime import datetime, timedelta
+import urllib.parse
 
 def generate_final_page(csv_filename, output_filename):
     events_data = []
@@ -42,12 +43,14 @@ def generate_final_page(csv_filename, output_filename):
         # -----------------------------------------------------------
         # [변경됨] JSON 형식의 문자열을 리스트로 변환
         # -----------------------------------------------------------
+        # 변경 - JSON 파싱 실패 시 평문 문자열도 리스트로 감싸서 반환
         def safe_json_load(text):
             if not text or text.strip() == '': return []
             try:
-                return json.loads(text)
+                result = json.loads(text)
+                return result if isinstance(result, list) else [result]
             except json.JSONDecodeError:
-                return []
+                return [text.strip()]  # ← "검색", "37.5, 127.0" 같은 평문도 처리
 
         naver_links = safe_json_load(row.get('네이버지도', '[]'))
         kakao_links = safe_json_load(row.get('다음지도', '[]'))
@@ -70,8 +73,13 @@ def generate_final_page(csv_filename, output_filename):
                 loc_name = loc_names[0] if loc_names else f"장소 {i+1}"
 
             # 2. 링크 매칭
-            n_link = naver_links[i] if i < len(naver_links) else ''
-            k_link = kakao_links[i] if i < len(kakao_links) else ''
+            raw_n = naver_links[i] if i < len(naver_links) else ''
+            raw_k = kakao_links[i] if i < len(kakao_links) else ''
+
+            encoded_loc = urllib.parse.quote(loc_name)
+
+            n_link = f"https://map.naver.com/p/search/{encoded_loc}" if raw_n == '검색' else raw_n
+            k_link = f"https://map.kakao.com/?q={encoded_loc}"       if raw_k == '검색' else raw_k
 
             # 3. 좌표 파싱 (문자열 "37.5, 127.0" -> float 변환)
             lat, lng = None, None
