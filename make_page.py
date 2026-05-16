@@ -17,8 +17,8 @@ def generate_final_page(csv_filename, output_filename):
             for row in reader:
                 raw_rows.append(row)
         
-        # [정렬 로직] '종료기간' 열을 기준으로 정렬
-        raw_rows.sort(key=lambda x: x.get('종료기간', '9999-12-31').strip())
+        # [정렬 로직] '시작기간' 열을 기준으로 정렬
+        raw_rows.sort(key=lambda x: x.get('시작기간', '9999-12-31').strip())
 
     except FileNotFoundError:
         print("오류: CSV 파일을 찾을 수 없습니다.")
