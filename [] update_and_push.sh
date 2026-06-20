@@ -75,3 +75,15 @@ case "$(uname -s)" in
         echo "[i] Unknown OS. Open manually: $URL"
         ;;
 esac
+
+# 7. Close this terminal window after finishing.
+#    NOTE: this closes the Git Bash/terminal window that launched the script.
+#    Skipped when the script is "sourced" (interactive) so it won't kill your session by accident.
+case "$-" in
+    *i*) : ;;  # sourced / interactive -> do not close
+    *)
+        echo "[+] Done. Closing window..."
+        ( sleep 1; kill -9 "$PPID" ) >/dev/null 2>&1 &
+        ;;
+esac
+exit 0
