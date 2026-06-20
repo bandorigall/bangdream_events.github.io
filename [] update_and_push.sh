@@ -1,42 +1,42 @@
 #!/bin/bash
-# events.csv 수정 후 이 스크립트 하나로: index.html 재생성 → 커밋 → pull → push
-# 사용법: ./update_and_push.sh "커밋 메시지"   (메시지 생략 시 자동 생성)
+# After editing events.csv, run this single script to: rebuild index.html -> commit -> pull -> push
+# Usage: ./update_and_push.sh "commit message"   (auto-generated if omitted)
 
-# 0. 스크립트 위치로 이동 (어디서 실행하든 동작하도록)
+# 0. Move to the script's own directory (so it works from anywhere)
 cd "$(dirname "$0")" || exit 1
 
-# 1. index.html 재생성 (make_page.py 실행)
+# 1. Rebuild index.html (run make_page.py)
 echo "[+] Building index.html (python -m make_page)..."
 python -m make_page
 if [ $? -ne 0 ]; then
     echo ""
-    echo " [!!!] 에러: index.html 생성 실패! make_page.py 를 확인하세요."
+    echo " [!!!] ERROR: Failed to build index.html. Check make_page.py."
     exit 1
 fi
 
-# 2. 변경사항 추가
+# 2. Stage changes
 echo "[+] Adding changes..."
 git add .
 
-# 3. 커밋 (메시지는 인자로 받거나 기본값 사용)
+# 3. Commit (message from arg, or default)
 COMMIT_MSG=${1:-"Auto update - $(date '+%Y-%m-%d %H:%M:%S')"}
 
-# 변경사항이 없으면 커밋 단계 건너뛰기
+# Skip commit if there is nothing staged
 if git diff --cached --quiet; then
-    echo "[i] 변경사항이 없어 커밋을 건너뜁니다."
+    echo "[i] No changes to commit. Skipping commit."
 else
     echo "[+] Committing with message: $COMMIT_MSG"
     git commit -m "$COMMIT_MSG"
 fi
 
-# 4. Pull (원격 변경사항 병합)
+# 4. Pull (merge remote changes)
 echo "[+] Pulling from remote..."
 git pull
 if [ $? -ne 0 ]; then
     echo ""
     echo "###################################################"
-    echo " [!!!] 에러 발생: 머지 충돌(Conflict)이 감지되었습니다."
-    echo " 직접 충돌을 해결한 뒤 다시 실행해주세요."
+    echo " [!!!] ERROR: Merge conflict detected."
+    echo " Resolve the conflict manually, then run again."
     echo "###################################################"
     exit 1
 fi
@@ -46,9 +46,18 @@ echo "[+] Pushing to remote..."
 git push
 if [ $? -ne 0 ]; then
     echo ""
-    echo " [!!!] 에러 발생: Push 실패! (권한 문제 또는 원격 설정 확인)"
+    echo " [!!!] ERROR: Push failed (check permissions or remote settings)."
     exit 1
 fi
 
 echo ""
-echo "[OK] index.html 재생성 + 커밋 + 푸시 완료!"
+echo "[OK] Rebuilt index.html + committed + pushed successfully!"
+
+# 6. Open the deployed GitHub Pages site in the default browser
+URL="https://bandorigall.github.io/bangdream_events.github.io/"
+echo "[+] Opening $URL ..."
+cmd.exe /c start "" "$URL" 2>/dev/null \
+    || start "" "$URL" 2>/dev/null \
+    || xdg-open "$URL" 2>/dev/null \
+    || open "$URL" 2>/dev/null \
+    || echo "[i] Could not auto-open browser. Open manually: $URL"
