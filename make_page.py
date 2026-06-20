@@ -113,11 +113,194 @@ def generate_final_page(csv_filename, output_filename):
             'location_text': raw_location,
             'map_targets': map_targets,
             'main_link': main_link,
-            'note': note
+            'note': note,
+            # 콜라보 카페 이벤트에만 굿즈/메뉴 계산기 버튼을 노출
+            'has_goods': ('콜라보 카페' in title)
         })
 
     # JSON 데이터 생성
     json_data = json.dumps(events_data, ensure_ascii=False)
+
+    # -----------------------------------------------------------
+    # 콜라보 카페 굿즈/메뉴 계산기 데이터
+    # cat: 분류 / thumb: 썸네일 / full: 원본(라이트박스용)
+    # -----------------------------------------------------------
+    T = 'assets/cafe/thumb/'
+    S = 'assets/cafe/source/'
+    cafe_goods = [
+        {'id': 'drink_star',  'cat': '메뉴', 'name': '마이고의 별을 향한 드링크',        'price': 6900,  'thumb': T+'menu_drink_star.jpg',  'full': S+'menu.jpg'},
+        {'id': 'drink_cross', 'cat': '메뉴', 'name': '마이고 아베무지카 교차하는 운명의 드링크', 'price': 6900, 'thumb': T+'menu_drink_cross.jpg', 'full': S+'menu.jpg'},
+        {'id': 'drink_grail', 'cat': '메뉴', 'name': '아베무지카의 성배 드링크',          'price': 6900,  'thumb': T+'menu_drink_grail.jpg', 'full': S+'menu.jpg'},
+        {'id': 'parfait',     'cat': '메뉴', 'name': '푸른 하늘의 나침반 파르페',         'price': 9900,  'thumb': T+'menu_parfait.jpg',     'full': S+'menu.jpg'},
+        {'id': 'burger',      'cat': '메뉴', 'name': '개연의 만찬 햄버거',               'price': 13900, 'thumb': T+'menu_burger.jpg',      'full': S+'menu.jpg'},
+        {'id': 'badge',       'cat': '굿즈', 'name': '트레이딩 캔뱃지 (10종 랜덤)',      'price': 8000,  'thumb': T+'goods_badge.jpg',      'full': S+'goods_badge_keyring.jpg'},
+        {'id': 'keyring',     'cat': '굿즈', 'name': '트레이딩 CD형 키링 (10종 랜덤)',   'price': 13900, 'thumb': T+'goods_keyring.jpg',    'full': S+'goods_badge_keyring.jpg'},
+        {'id': 'stand',       'cat': '굿즈', 'name': '아크릴 스탠드 (10종)',            'price': 18900, 'thumb': T+'goods_stand.jpg',      'full': S+'goods_stand_block.jpg'},
+        {'id': 'block',       'cat': '굿즈', 'name': '아크릴 블록 (2종)',              'price': 34900, 'thumb': T+'goods_block.jpg',      'full': S+'goods_stand_block.jpg'},
+    ]
+    cafe_goods_json = json.dumps(cafe_goods, ensure_ascii=False)
+    # 특전 안내 이미지 (라이트박스로 열어 확인)
+    cafe_bonus = {
+        'coaster': S+'bonus_coaster.jpg',          # 메뉴 구매 특전(코스터·돌로리스 생일)
+        'postcard_poster': S+'bonus_postcard_poster.jpg',  # 4만/8만 엽서·포스터
+    }
+    cafe_bonus_json = json.dumps(cafe_bonus, ensure_ascii=False)
+
+    # 추가 CSS (일반 문자열 → 중괄호 그대로 사용)
+    extra_css = """
+        /* ===== 굿즈 계산기 모달 ===== */
+        .gm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; }
+        .gm-box { background:#fff; width:min(820px,100%); max-height:90vh; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.3); }
+        .gm-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:linear-gradient(135deg,#ff4081,#ff80ab); color:#fff; font-weight:800; font-size:1.1rem; }
+        .gm-close { background:rgba(255,255,255,0.25); border:none; color:#fff; width:30px; height:30px; border-radius:50%; font-size:1rem; cursor:pointer; }
+        .gm-body { display:flex; min-height:0; flex:1; }
+        .gm-list { flex:1.3; overflow-y:auto; padding:14px; border-right:1px solid #eee; }
+        .gm-cart { flex:1; overflow-y:auto; padding:14px; background:#fcfafc; display:flex; flex-direction:column; }
+        .gm-cat { font-weight:800; color:#ff4081; margin:10px 4px 6px; font-size:0.95rem; }
+        .gm-item { display:flex; align-items:center; gap:10px; padding:8px; border:1px solid #eee; border-radius:10px; margin-bottom:8px; }
+        .gm-thumb { width:52px; height:52px; object-fit:cover; border-radius:8px; cursor:zoom-in; background:#f3f3f3; flex-shrink:0; }
+        .gm-info { flex:1; cursor:pointer; min-width:0; }
+        .gm-name { font-size:0.88rem; font-weight:600; word-break:keep-all; }
+        .gm-price { font-size:0.82rem; color:#888; }
+        .gm-add { border:none; background:#ff4081; color:#fff; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; flex-shrink:0; }
+        .gm-add:hover { opacity:0.9; }
+        .gm-cart h3 { margin:0 0 10px; font-size:1rem; }
+        .gm-empty { color:#aaa; text-align:center; padding:30px 0; font-size:0.85rem; }
+        .gm-cart-row { display:flex; align-items:center; gap:6px; padding:7px 0; border-bottom:1px dashed #eee; font-size:0.82rem; }
+        .gm-cart-name { flex:1; word-break:keep-all; }
+        .gm-qtybox { display:flex; align-items:center; gap:6px; }
+        .gm-qtybox button { width:22px; height:22px; border:1px solid #ddd; background:#fff; border-radius:6px; cursor:pointer; font-weight:700; }
+        .gm-cart-sub { width:74px; text-align:right; font-weight:600; }
+        .gm-total { margin-top:auto; padding-top:14px; font-size:1.05rem; text-align:right; }
+        .gm-total b { color:#ff4081; font-size:1.25rem; }
+        .gm-bonus-title { margin-top:14px; font-weight:800; font-size:0.9rem; color:#444; }
+        .gm-bonus-row { margin-top:8px; padding:9px 11px; border-radius:8px; background:#f1f1f1; color:#999; font-size:0.85rem; }
+        .gm-bonus-row.on { background:#fff0f5; color:#d81b60; font-weight:700; }
+        .gm-bonus-row.clickable { cursor:pointer; }
+        .gm-bonus-row.clickable:hover { outline:2px solid #ff80ab; }
+        .gm-bonus-row span { font-weight:400; font-size:0.75rem; color:#b08; }
+        .gm-hint { margin-top:8px; font-size:0.78rem; color:#ff8a00; text-align:right; }
+        .gm-note { margin-top:12px; font-size:0.72rem; color:#999; line-height:1.4; }
+        .gm-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:3000; align-items:center; justify-content:center; cursor:zoom-out; padding:20px; }
+        .gm-lightbox img { max-width:95%; max-height:95%; border-radius:8px; }
+        @media (max-width:680px) { .gm-body { flex-direction:column; } .gm-list { border-right:none; border-bottom:1px solid #eee; } }
+    """
+
+    # 모달 HTML
+    modal_html = """
+<div id="goods-modal" class="gm-overlay" onclick="if(event.target===this)closeGoodsModal()">
+  <div class="gm-box">
+    <div class="gm-header">
+      <span>🛒 콜라보 카페 굿즈 · 메뉴 계산기</span>
+      <button class="gm-close" onclick="closeGoodsModal()">✕</button>
+    </div>
+    <div class="gm-body">
+      <div class="gm-list" id="gm-list"></div>
+      <div class="gm-cart">
+        <h3>🧾 장바구니</h3>
+        <div class="gm-cart-items" id="gm-cart-items"></div>
+        <div class="gm-total" id="gm-total"></div>
+        <div id="gm-bonus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="gm-lightbox" class="gm-lightbox" onclick="this.style.display='none'"><img id="gm-lightbox-img" alt=""></div>
+"""
+
+    # 계산기 JS (일반 문자열)
+    goods_js = """
+    const CAFE_GOODS = __CAFE_GOODS__;
+    const CAFE_BONUS = __CAFE_BONUS__;
+    let gmCart = {};
+
+    function openGoodsModal() { buildGoodsList(); renderCart(); document.getElementById('goods-modal').style.display='flex'; }
+    function closeGoodsModal() { document.getElementById('goods-modal').style.display='none'; }
+
+    function buildGoodsList() {
+        const wrap = document.getElementById('gm-list');
+        if (wrap.dataset.built) return;
+        const cats = {};
+        CAFE_GOODS.forEach(g => { (cats[g.cat] = cats[g.cat] || []).push(g); });
+        let html = '';
+        for (const c in cats) {
+            html += `<div class="gm-cat">${c}</div>`;
+            cats[c].forEach(g => {
+                html += `<div class="gm-item">
+                    <img src="${g.thumb}" class="gm-thumb" onclick="showLightbox('${g.full}')">
+                    <div class="gm-info" onclick="addToCart('${g.id}')">
+                        <div class="gm-name">${g.name}</div>
+                        <div class="gm-price">${g.price.toLocaleString()}원</div>
+                    </div>
+                    <button class="gm-add" onclick="addToCart('${g.id}')">담기</button>
+                </div>`;
+            });
+        }
+        wrap.innerHTML = html;
+        wrap.dataset.built = '1';
+    }
+
+    function addToCart(id) { gmCart[id] = (gmCart[id] || 0) + 1; renderCart(); }
+    function changeQty(id, d) { gmCart[id] = (gmCart[id] || 0) + d; if (gmCart[id] <= 0) delete gmCart[id]; renderCart(); }
+
+    function renderCart() {
+        const box = document.getElementById('gm-cart-items');
+        const ids = Object.keys(gmCart);
+        if (ids.length === 0) {
+            box.innerHTML = '<div class="gm-empty">왼쪽에서 상품을 담아보세요</div>';
+        } else {
+            let h = '';
+            ids.forEach(id => {
+                const g = CAFE_GOODS.find(x => x.id === id);
+                const q = gmCart[id];
+                h += `<div class="gm-cart-row">
+                    <span class="gm-cart-name">${g.name}</span>
+                    <span class="gm-qtybox">
+                        <button onclick="changeQty('${id}',-1)">−</button><b>${q}</b><button onclick="changeQty('${id}',1)">＋</button>
+                    </span>
+                    <span class="gm-cart-sub">${(g.price*q).toLocaleString()}원</span>
+                </div>`;
+            });
+            box.innerHTML = h;
+        }
+        const total = ids.reduce((s, id) => s + CAFE_GOODS.find(x => x.id === id).price * gmCart[id], 0);
+        document.getElementById('gm-total').innerHTML = `합계 <b>${total.toLocaleString()}원</b>`;
+
+        // 메뉴 수량만큼 메뉴 구매 특전(코스터) 자동 증정 (메뉴 1개당 1장)
+        const menuQty = ids.reduce((s, id) => s + (CAFE_GOODS.find(x => x.id === id).cat === '메뉴' ? gmCart[id] : 0), 0);
+        const card = Math.floor(total / 40000);
+        const poster = Math.floor(total / 80000);
+        let b = '<div class="gm-bonus-title">🎁 받을 수 있는 특전</div>';
+        if (menuQty > 0) {
+            b += `<div class="gm-bonus-row on clickable" onclick="showLightbox('${CAFE_BONUS.coaster}')">🥤 메뉴 구매 특전 코스터 <b>${menuQty}장</b> <span>(메뉴 1개당 1장 · 클릭하여 보기)</span></div>`;
+        }
+
+        // 돌로리스 생일 특전 (기간 한정: 2026-06-26 ~ 2026-07-02)
+        // 조건: 성배 드링크 / 개연의 만찬 햄버거 구매 시 생일 엽서 증정
+        const bdayStart = new Date('2026-06-26T00:00:00');
+        const bdayEnd = new Date('2026-07-02T23:59:59');
+        const inBday = (new Date() >= bdayStart) && (new Date() <= bdayEnd);
+        const bdayQty = ids.reduce((s, id) => s + (['drink_grail', 'burger'].includes(id) ? gmCart[id] : 0), 0);
+        if (bdayQty > 0) {
+            const tag = inBday ? '' : ' (기간 외)';
+            b += `<div class="gm-bonus-row ${inBday?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.coaster}')">🎂 돌로리스 생일 엽서 <b>${bdayQty}장</b>${tag} <span>(6/26~7/2 한정 · 성배 드링크·햄버거 구매 시 · 클릭하여 보기)</span></div>`;
+        }
+        b += `<div class="gm-bonus-row ${card>0?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.postcard_poster}')">🎴 홀로그램 엽서 <b>${card}장</b> <span>(4만원당 1장 · 클릭하여 보기)</span></div>`;
+        b += `<div class="gm-bonus-row ${poster>0?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.postcard_poster}')">🖼️ A3 펄 포스터 <b>${poster}장</b> <span>(8만원당 1장 · 클릭하여 보기)</span></div>`;
+        if (total > 0 && total % 40000 !== 0) {
+            b += `<div class="gm-hint">${(40000-(total%40000)).toLocaleString()}원 더 담으면 엽서 1장 추가</div>`;
+        }
+        b += `<div class="gm-note">※ 코스터는 1~2주차 MyGO!!!!! / 3~4주차 Ave Mujica 전 6종 중 랜덤. 엽서·포스터는 굿즈+메뉴 합산 결제금액 기준 랜덤 증정. 돌로리스 생일 엽서(6/26~7/2)는 성배 드링크·햄버거 외 돌로리스 굿즈(랜덤굿즈 제외) 구매 시에도 증정.</div>`;
+        document.getElementById('gm-bonus').innerHTML = b;
+    }
+
+    function showLightbox(src) {
+        document.getElementById('gm-lightbox-img').src = src;
+        document.getElementById('gm-lightbox').style.display = 'flex';
+    }
+    """
+    goods_js = goods_js.replace('__CAFE_GOODS__', cafe_goods_json)
+    goods_js = goods_js.replace('__CAFE_BONUS__', cafe_bonus_json)
 
     # HTML 생성 (HTML/CSS/JS 부분은 기존과 동일하므로 그대로 유지)
     html = f"""
@@ -289,6 +472,7 @@ def generate_final_page(csv_filename, output_filename):
             .info-area {{ width: 100%; height: auto; border-right: none; border-bottom: 1px solid #ddd; }}
             .map-area {{ height: 400px; }}
         }}
+        {extra_css}
     </style>
 </head>
 <body>
@@ -453,12 +637,18 @@ def generate_final_page(csv_filename, output_filename):
         btnsHtml += '</div>';
 
         let noteHtml = evt.note ? `<div class="note-text">📢 ${{evt.note}}</div>` : '';
-        let mainLinkHtml = evt.main_link ? `<a href="${{evt.main_link}}" target="_blank" class="btn btn-super-main">👉 통합 정보 확인하기</a>` : '';
+        let goodsBtnHtml = evt.has_goods
+            ? `<button onclick="openGoodsModal()" class="btn-super-main" style="background:linear-gradient(135deg,#7b4fff,#a17bff); margin-top:auto;">🛒 굿즈 · 메뉴 계산기 열기</button>`
+            : '';
+        let mainLinkHtml = evt.main_link
+            ? `<a href="${{evt.main_link}}" target="_blank" class="btn btn-super-main" style="${{evt.has_goods ? 'margin-top:10px;' : ''}}">👉 통합 정보 확인하기</a>`
+            : '';
 
         panel.innerHTML = `
             <div class="panel-header">${{evt.title}}</div>
             ${{noteHtml}}
             ${{btnsHtml}}
+            ${{goodsBtnHtml}}
             ${{mainLinkHtml}}
         `;
     }}
@@ -466,7 +656,9 @@ def generate_final_page(csv_filename, output_filename):
     function zoomToLocation(lat, lng) {{
         map.flyTo([lat, lng], 17, {{ animate: true, duration: 1.5 }});
     }}
+    {goods_js}
 </script>
+{modal_html}
 </body>
 </html>
 """
