@@ -130,13 +130,13 @@ def generate_final_page(csv_filename, output_filename):
     cafe_goods = [
         {'id': 'drink_star',  'cat': '메뉴', 'name': '마이고의 별을 향한 드링크',        'price': 6900,  'thumb': T+'menu_drink_star.jpg',  'full': S+'menu.jpg'},
         {'id': 'drink_cross', 'cat': '메뉴', 'name': '마이고 아베무지카 교차하는 운명의 드링크', 'price': 6900, 'thumb': T+'menu_drink_cross.jpg', 'full': S+'menu.jpg'},
-        {'id': 'drink_grail', 'cat': '메뉴', 'name': '아베무지카의 성배 드링크',          'price': 6900,  'thumb': T+'menu_drink_grail.jpg', 'full': S+'menu.jpg'},
+        {'id': 'drink_grail', 'cat': '메뉴', 'name': '아베무지카의 성배 드링크',          'price': 6900,  'thumb': T+'menu_drink_grail.jpg', 'full': S+'menu.jpg', 'bday': True},
         {'id': 'parfait',     'cat': '메뉴', 'name': '푸른 하늘의 나침반 파르페',         'price': 9900,  'thumb': T+'menu_parfait.jpg',     'full': S+'menu.jpg'},
-        {'id': 'burger',      'cat': '메뉴', 'name': '개연의 만찬 햄버거',               'price': 13900, 'thumb': T+'menu_burger.jpg',      'full': S+'menu.jpg'},
+        {'id': 'burger',      'cat': '메뉴', 'name': '개연의 만찬 햄버거',               'price': 13900, 'thumb': T+'menu_burger.jpg',      'full': S+'menu.jpg', 'bday': True},
         {'id': 'badge',       'cat': '굿즈', 'name': '트레이딩 캔뱃지 (10종 랜덤)',      'price': 8000,  'thumb': T+'goods_badge.jpg',      'full': S+'goods_badge_keyring.jpg'},
         {'id': 'keyring',     'cat': '굿즈', 'name': '트레이딩 CD형 키링 (10종 랜덤)',   'price': 13900, 'thumb': T+'goods_keyring.jpg',    'full': S+'goods_badge_keyring.jpg'},
-        {'id': 'stand',       'cat': '굿즈', 'name': '아크릴 스탠드 (10종)',            'price': 18900, 'thumb': T+'goods_stand.jpg',      'full': S+'goods_stand_block.jpg'},
-        {'id': 'block',       'cat': '굿즈', 'name': '아크릴 블록 (2종)',              'price': 34900, 'thumb': T+'goods_block.jpg',      'full': S+'goods_stand_block.jpg'},
+        {'id': 'stand',       'cat': '굿즈', 'name': '아크릴 스탠드 (10종)',            'price': 18900, 'thumb': T+'goods_stand.jpg',      'full': S+'goods_stand_block.jpg', 'bday': '돌로리스 선택 시'},
+        {'id': 'block',       'cat': '굿즈', 'name': '아크릴 블록 (2종)',              'price': 34900, 'thumb': T+'goods_block.jpg',      'full': S+'goods_stand_block.jpg', 'bday': '아베무지카 · 확인필요'},
     ]
     cafe_goods_json = json.dumps(cafe_goods, ensure_ascii=False)
     # 특전 안내 이미지 (라이트박스로 열어 확인)
@@ -161,6 +161,7 @@ def generate_final_page(csv_filename, output_filename):
         .gm-thumb { width:52px; height:52px; object-fit:cover; border-radius:8px; cursor:zoom-in; background:#f3f3f3; flex-shrink:0; }
         .gm-info { flex:1; cursor:pointer; min-width:0; }
         .gm-name { font-size:0.88rem; font-weight:600; word-break:keep-all; }
+        .gm-bday-badge { display:inline-block; margin-left:5px; padding:1px 6px; border-radius:999px; background:#fff0d9; color:#c47a00; font-size:0.68rem; font-weight:700; white-space:nowrap; }
         .gm-price { font-size:0.82rem; color:#888; }
         .gm-add { border:none; background:#ff4081; color:#fff; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; flex-shrink:0; }
         .gm-add:hover { opacity:0.9; }
@@ -226,10 +227,13 @@ def generate_final_page(csv_filename, output_filename):
         for (const c in cats) {
             html += `<div class="gm-cat">${c}</div>`;
             cats[c].forEach(g => {
+                const bdayBadge = g.bday
+                    ? `<span class="gm-bday-badge" title="돌로리스 생일 특전 대상 (6/26~7/2)">🎂 생일특전${typeof g.bday==='string' ? ' ('+g.bday+')' : ''}</span>`
+                    : '';
                 html += `<div class="gm-item">
                     <img src="${g.thumb}" class="gm-thumb" onclick="showLightbox('${g.full}')">
                     <div class="gm-info" onclick="addToCart('${g.id}')">
-                        <div class="gm-name">${g.name}</div>
+                        <div class="gm-name">${g.name}${bdayBadge}</div>
                         <div class="gm-price">${g.price.toLocaleString()}원</div>
                     </div>
                     <button class="gm-add" onclick="addToCart('${g.id}')">담기</button>
@@ -280,10 +284,10 @@ def generate_final_page(csv_filename, output_filename):
         const bdayStart = new Date('2026-06-26T00:00:00');
         const bdayEnd = new Date('2026-07-02T23:59:59');
         const inBday = (new Date() >= bdayStart) && (new Date() <= bdayEnd);
-        const bdayQty = ids.reduce((s, id) => s + (['drink_grail', 'burger'].includes(id) ? gmCart[id] : 0), 0);
-        if (bdayQty > 0) {
-            const tag = inBday ? '' : ' (기간 외)';
-            b += `<div class="gm-bonus-row ${inBday?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.coaster}')">🎂 돌로리스 생일 엽서 <b>${bdayQty}장</b>${tag} <span>(6/26~7/2 한정 · 성배 드링크·햄버거 구매 시 · 클릭하여 보기)</span></div>`;
+        const hasBday = ids.some(id => CAFE_GOODS.find(x => x.id === id).bday);
+        if (hasBday) {
+            const bdayTag = inBday ? '증정' : '대상 (기간 외)';
+            b += `<div class="gm-bonus-row ${inBday?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.coaster}')">🎂 돌로리스 생일 엽서 <b>${bdayTag}</b> <span>(6/26~7/2 한정 · 성배 드링크·개연의 만찬 햄버거·돌로리스 굿즈(랜덤굿즈 제외) 구매 시 1장 · 클릭하여 보기)</span></div>`;
         }
         b += `<div class="gm-bonus-row ${card>0?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.postcard_poster}')">🎴 홀로그램 엽서 <b>${card}장</b> <span>(4만원당 1장 · 클릭하여 보기)</span></div>`;
         b += `<div class="gm-bonus-row ${poster>0?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.postcard_poster}')">🖼️ A3 펄 포스터 <b>${poster}장</b> <span>(8만원당 1장 · 클릭하여 보기)</span></div>`;
