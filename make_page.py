@@ -21,7 +21,7 @@ def generate_final_page(csv_filename, output_filename):
         raw_rows.sort(key=lambda x: x.get('시작기간', '9999-12-31').strip())
 
     except FileNotFoundError:
-        print("오류: CSV 파일을 찾을 수 없습니다.")
+        print("ERROR: CSV file not found.")
         return
 
     # 정렬된 데이터를 바탕으로 events_data 생성
@@ -669,7 +669,7 @@ def generate_final_page(csv_filename, output_filename):
 
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f"'{output_filename}' 생성 완료. (데이터 업데이트 시간: {current_time_str})")
+    print(f"'{output_filename}' build complete. (data updated: {current_time_str})")
 
 if __name__ == "__main__":
     generate_final_page('events.csv', 'index.html')

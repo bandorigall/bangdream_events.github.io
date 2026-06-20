@@ -2,6 +2,8 @@
 # After editing events.csv, run this single script to: rebuild index.html -> commit -> pull -> push
 # Usage: ./update_and_push.sh "commit message"   (auto-generated if omitted)
 
+set +H  # disable history expansion ('!' in strings stays literal)
+
 # 0. Move to the script's own directory (so it works from anywhere)
 cd "$(dirname "$0")" || exit 1
 
@@ -10,7 +12,7 @@ echo "[+] Building index.html (python -m make_page)..."
 python -m make_page
 if [ $? -ne 0 ]; then
     echo ""
-    echo " [!!!] ERROR: Failed to build index.html. Check make_page.py."
+    echo ' [ERROR] Failed to build index.html. Check make_page.py.'
     exit 1
 fi
 
@@ -34,10 +36,10 @@ echo "[+] Pulling from remote..."
 git pull
 if [ $? -ne 0 ]; then
     echo ""
-    echo "###################################################"
-    echo " [!!!] ERROR: Merge conflict detected."
-    echo " Resolve the conflict manually, then run again."
-    echo "###################################################"
+    echo '###################################################'
+    echo ' [ERROR] Merge conflict detected.'
+    echo ' Resolve the conflict manually, then run again.'
+    echo '###################################################'
     exit 1
 fi
 
@@ -46,18 +48,30 @@ echo "[+] Pushing to remote..."
 git push
 if [ $? -ne 0 ]; then
     echo ""
-    echo " [!!!] ERROR: Push failed (check permissions or remote settings)."
+    echo ' [ERROR] Push failed (check permissions or remote settings).'
     exit 1
 fi
 
 echo ""
-echo "[OK] Rebuilt index.html + committed + pushed successfully!"
+echo '[OK] Rebuilt index.html + committed + pushed successfully.'
 
-# 6. Open the deployed GitHub Pages site in the default browser
+# 6. Open the deployed GitHub Pages site in the default browser (per-OS)
 URL="https://bandorigall.github.io/bangdream_events.github.io/"
 echo "[+] Opening $URL ..."
-cmd.exe /c start "" "$URL" 2>/dev/null \
-    || start "" "$URL" 2>/dev/null \
-    || xdg-open "$URL" 2>/dev/null \
-    || open "$URL" 2>/dev/null \
-    || echo "[i] Could not auto-open browser. Open manually: $URL"
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)   # Windows (Git Bash / MSYS / Cygwin)
+        powershell.exe -NoProfile -Command "Start-Process '$URL'" \
+            || echo "[i] Could not auto-open browser. Open manually: $URL"
+        ;;
+    Linux*)                 # Linux
+        xdg-open "$URL" >/dev/null 2>&1 \
+            || echo "[i] Could not auto-open browser. Open manually: $URL"
+        ;;
+    Darwin*)                # macOS
+        open "$URL" \
+            || echo "[i] Could not auto-open browser. Open manually: $URL"
+        ;;
+    *)
+        echo "[i] Unknown OS. Open manually: $URL"
+        ;;
+esac
