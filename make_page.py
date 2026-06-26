@@ -30,7 +30,7 @@ def generate_final_page(csv_filename, output_filename):
         start = row.get('시작기간', '').strip()
         end = row.get('종료기간', '').strip()
         raw_location = row.get('장소', '')
-        main_link = row.get('통합정보모음', '')
+        main_link_raw = row.get('통합정보모음', '')
         note = row.get('비고', '')
 
         # 날짜 포맷팅
@@ -51,6 +51,18 @@ def generate_final_page(csv_filename, output_filename):
                 return result if isinstance(result, list) else [result]
             except json.JSONDecodeError:
                 return [text.strip()]  # ← "검색", "37.5, 127.0" 같은 평문도 처리
+
+        # 통합정보모음: 단일 URL 또는 리스트. "라벨|URL" 형식이면 버튼 이름에 라벨 사용
+        def parse_main_links(text):
+            out = []
+            for it in safe_json_load(text):
+                if isinstance(it, str) and '|' in it:
+                    lbl, _, u = it.partition('|')
+                    out.append({'label': lbl.strip(), 'url': u.strip()})
+                else:
+                    out.append({'label': '', 'url': it})
+            return out
+        main_links = parse_main_links(main_link_raw)
 
         naver_links = safe_json_load(row.get('네이버지도', '[]'))
         kakao_links = safe_json_load(row.get('다음지도', '[]'))
@@ -112,7 +124,7 @@ def generate_final_page(csv_filename, output_filename):
             'cal_end': cal_end,
             'location_text': raw_location,
             'map_targets': map_targets,
-            'main_link': main_link,
+            'main_links': main_links,
             'note': note,
             # 콜라보 카페 이벤트에만 굿즈/메뉴 계산기 버튼을 노출
             'has_goods': ('콜라보 카페' in title)
@@ -644,9 +656,11 @@ def generate_final_page(csv_filename, output_filename):
         let goodsBtnHtml = evt.has_goods
             ? `<button onclick="openGoodsModal()" class="btn-super-main" style="background:linear-gradient(135deg,#7b4fff,#a17bff); margin-top:auto;">🛒 굿즈 · 메뉴 계산기 열기</button>`
             : '';
-        let mainLinkHtml = evt.main_link
-            ? `<a href="${{evt.main_link}}" target="_blank" class="btn btn-super-main" style="${{evt.has_goods ? 'margin-top:10px;' : ''}}">👉 통합 정보 확인하기</a>`
-            : '';
+        let mainLinkHtml = (evt.main_links || []).map((m, i) => {{
+            const label = m.label ? `👉 ${{m.label}} 정보 확인하기` : '👉 통합 정보 확인하기';
+            const mt = (evt.has_goods || i > 0) ? 'margin-top:10px;' : '';
+            return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main" style="${{mt}}">${{label}}</a>`;
+        }}).join('');
 
         panel.innerHTML = `
             <div class="panel-header">${{evt.title}}</div>
