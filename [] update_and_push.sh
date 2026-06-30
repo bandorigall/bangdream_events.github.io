@@ -55,8 +55,42 @@ fi
 echo ""
 echo '[OK] Rebuilt index.html + committed + pushed successfully.'
 
-# 6. Open the deployed GitHub Pages site in the default browser (per-OS)
+# 6. Wait for the GitHub Pages deploy of THIS commit to finish, then open browser
 URL="https://bandorigall.github.io/bangdream_events.github.io/"
+REPO="bandorigall/bangdream_events.github.io"
+PUSHED_SHA="$(git rev-parse HEAD)"
+
+if command -v gh >/dev/null 2>&1; then
+    echo "[+] Waiting for GitHub Pages to deploy commit ${PUSHED_SHA:0:7} ..."
+    MAX_WAIT=300   # seconds
+    INTERVAL=5
+    WAITED=0
+    DEPLOYED=0
+    while [ "$WAITED" -lt "$MAX_WAIT" ]; do
+        BUILD_JSON="$(gh api "repos/$REPO/pages/builds/latest" 2>/dev/null)"
+        STATUS="$(printf '%s' "$BUILD_JSON" | sed -n 's/.*"status":[ ]*"\([^"]*\)".*/\1/p')"
+        BUILD_SHA="$(printf '%s' "$BUILD_JSON" | sed -n 's/.*"commit":[ ]*"\([^"]*\)".*/\1/p')"
+        if [ "$STATUS" = "built" ] && [ "$BUILD_SHA" = "$PUSHED_SHA" ]; then
+            echo "[OK] Pages deploy completed for ${PUSHED_SHA:0:7}."
+            DEPLOYED=1
+            break
+        fi
+        if [ "$STATUS" = "errored" ] && [ "$BUILD_SHA" = "$PUSHED_SHA" ]; then
+            echo "[ERROR] Pages build errored for ${PUSHED_SHA:0:7}. Opening site anyway."
+            break
+        fi
+        printf '    ... status=%s (%ss elapsed)\r' "${STATUS:-pending}" "$WAITED"
+        sleep "$INTERVAL"
+        WAITED=$((WAITED + INTERVAL))
+    done
+    echo ""
+    if [ "$DEPLOYED" -ne 1 ] && [ "$WAITED" -ge "$MAX_WAIT" ]; then
+        echo "[i] Timed out waiting for deploy (${MAX_WAIT}s). Opening site anyway."
+    fi
+else
+    echo "[i] 'gh' not found; cannot track deploy status. Opening site directly."
+fi
+
 echo "[+] Opening $URL ..."
 case "$(uname -s)" in
     MINGW*|MSYS*|CYGWIN*)   # Windows (Git Bash / MSYS / Cygwin)
