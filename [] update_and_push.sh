@@ -66,20 +66,29 @@ if command -v gh >/dev/null 2>&1; then
     INTERVAL=5
     WAITED=0
     DEPLOYED=0
+    # Use the deployments API (github-pages env). The legacy pages/builds endpoint
+    # lags behind / doesn't reflect new deploys, so we track the deployment status here.
     while [ "$WAITED" -lt "$MAX_WAIT" ]; do
-        BUILD_JSON="$(gh api "repos/$REPO/pages/builds/latest" 2>/dev/null)"
-        STATUS="$(printf '%s' "$BUILD_JSON" | sed -n 's/.*"status":[ ]*"\([^"]*\)".*/\1/p')"
-        BUILD_SHA="$(printf '%s' "$BUILD_JSON" | sed -n 's/.*"commit":[ ]*"\([^"]*\)".*/\1/p')"
-        if [ "$STATUS" = "built" ] && [ "$BUILD_SHA" = "$PUSHED_SHA" ]; then
-            echo "[OK] Pages deploy completed for ${PUSHED_SHA:0:7}."
-            DEPLOYED=1
-            break
+        DEPLOY_ID="$(gh api "repos/$REPO/deployments?sha=$PUSHED_SHA&environment=github-pages&per_page=1" \
+                        --jq '.[0].id' 2>/dev/null)"
+        if [ -n "$DEPLOY_ID" ] && [ "$DEPLOY_ID" != "null" ]; then
+            STATE="$(gh api "repos/$REPO/deployments/$DEPLOY_ID/statuses?per_page=1" \
+                        --jq '.[0].state' 2>/dev/null)"
+            case "$STATE" in
+                success)
+                    echo "[OK] Pages deploy completed for ${PUSHED_SHA:0:7}."
+                    DEPLOYED=1
+                    break
+                    ;;
+                error|failure)
+                    echo "[ERROR] Pages deploy $STATE for ${PUSHED_SHA:0:7}. Opening site anyway."
+                    break
+                    ;;
+            esac
+        else
+            STATE="pending"
         fi
-        if [ "$STATUS" = "errored" ] && [ "$BUILD_SHA" = "$PUSHED_SHA" ]; then
-            echo "[ERROR] Pages build errored for ${PUSHED_SHA:0:7}. Opening site anyway."
-            break
-        fi
-        printf '    ... status=%s (%ss elapsed)\r' "${STATUS:-pending}" "$WAITED"
+        printf '    ... state=%s (%ss elapsed)\r' "${STATE:-pending}" "$WAITED"
         sleep "$INTERVAL"
         WAITED=$((WAITED + INTERVAL))
     done
