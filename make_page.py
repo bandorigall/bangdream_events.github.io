@@ -63,6 +63,8 @@ def generate_final_page(csv_filename, output_filename):
                     out.append({'label': '', 'url': it})
             return out
         main_links = parse_main_links(main_link_raw)
+        # 예매처: 통합정보모음과 동일 형식("라벨|URL" 또는 리스트). 별도 예매 버튼으로 노출
+        ticket_links = parse_main_links(row.get('예매처', ''))
 
         naver_links = safe_json_load(row.get('네이버지도', '[]'))
         kakao_links = safe_json_load(row.get('다음지도', '[]'))
@@ -125,6 +127,7 @@ def generate_final_page(csv_filename, output_filename):
             'location_text': raw_location,
             'map_targets': map_targets,
             'main_links': main_links,
+            'ticket_links': ticket_links,
             'note': note,
             # 콜라보 카페 이벤트에만 굿즈/메뉴 계산기 버튼을 노출
             'has_goods': ('콜라보 카페' in title)
@@ -478,6 +481,8 @@ def generate_final_page(csv_filename, output_filename):
             transition: 0.2s;
         }}
         .btn-super-main:hover {{ transform: translateY(-2px); box-shadow: 0 6px 15px rgba(233, 30, 99, 0.3); }}
+        .btn-ticket {{ background: linear-gradient(135deg, #00cd3c, #21d35d); box-shadow: 0 4px 10px rgba(0, 205, 60, 0.25); }}
+        .btn-ticket:hover {{ box-shadow: 0 6px 15px rgba(0, 205, 60, 0.35); }}
 
         @media (max-width: 900px) {{
             body {{ flex-direction: column; overflow: auto; }}
@@ -661,6 +666,10 @@ def generate_final_page(csv_filename, output_filename):
             const mt = (evt.has_goods || i > 0) ? 'margin-top:10px;' : '';
             return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main" style="${{mt}}">${{label}}</a>`;
         }}).join('');
+        let ticketHtml = (evt.ticket_links || []).map(m => {{
+            const label = m.label ? `🎟️ ${{m.label}} 예매하러 가기` : '🎟️ 예매하러 가기';
+            return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main btn-ticket" style="margin-top:10px;">${{label}}</a>`;
+        }}).join('');
 
         panel.innerHTML = `
             <div class="panel-header">${{evt.title}}</div>
@@ -668,6 +677,7 @@ def generate_final_page(csv_filename, output_filename):
             ${{btnsHtml}}
             ${{goodsBtnHtml}}
             ${{mainLinkHtml}}
+            ${{ticketHtml}}
         `;
     }}
 
