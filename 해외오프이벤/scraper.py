@@ -30,8 +30,11 @@ MANUAL_CSV = os.path.join(HERE, "manual_overseas.csv")
 
 UA = "Mozilla/5.0 (bandori-overseas-scraper; +https://bang-dream.com)"
 
-# events/ 페이지를 몇 페이지까지 훑을지 (앞쪽에 미래 이벤트가 모여 있음)
-EVENT_MAX_PAGES = 6
+# events/ 목록은 미래→과거 순으로 정렬되어 있다.
+# 과거 행사(종료일 < 오늘)가 누적 이만큼 나오면 더 볼 필요 없으므로 페이징 중단.
+EVENT_STOP_AFTER_PAST = 3
+# 만일을 위한 안전 상한 (무한 페이징 방지)
+EVENT_PAGE_CAP = 16
 
 # news/ 에서 '오프라인/콜라보성'으로 볼 키워드 (하나라도 포함되면 후보)
 NEWS_INCLUDE = ["コラボ", "カフェ", "cafe", "キャンペーン", "フェア", "ポップアップ",
@@ -221,8 +224,12 @@ def news_is_offline(item):
 # 수집
 # ----------------------------------------------------------------------------
 def collect_events():
+    from datetime import date
+    today = date.today().isoformat()
+
     events = []
-    for page in range(1, EVENT_MAX_PAGES + 1):
+    past_seen = 0
+    for page in range(1, EVENT_PAGE_CAP + 1):
         url = f"{BASE}/events/" if page == 1 else f"{BASE}/events/page/{page}/"
         try:
             html = fetch(url)
@@ -233,7 +240,17 @@ def collect_events():
         if not rows:
             break
         events.extend(rows)
-        print(f"[+] events page {page}: {len(rows)}건")
+
+        # 이 페이지에서 '이미 끝난 행사'(종료일 < 오늘) 개수 누적
+        page_past = sum(1 for e in rows
+                        if (e.get("end") or e.get("start") or "9999") < today)
+        past_seen += page_past
+        print(f"[+] events page {page}: {len(rows)}건 (지난 행사 누적 {past_seen})")
+
+        # 과거 행사가 충분히 나오면 뒤쪽은 전부 과거이므로 중단
+        if past_seen >= EVENT_STOP_AFTER_PAST:
+            print(f"[i] 지난 행사 {past_seen}건 도달 → events 페이징 중단")
+            break
     return events
 
 
