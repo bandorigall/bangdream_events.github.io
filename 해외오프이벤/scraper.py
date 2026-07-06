@@ -91,6 +91,50 @@ def parse_jp_date(text):
     return (fmt(dates[0]), fmt(dates[-1]))
 
 
+def parse_jp_date_groups(text):
+    """일본어 날짜 문자열을 '연속일 묶음' 단위로 나눈다.
+    '・'로 나열된 날짜 중 달력상 연속된 날은 한 그룹(기간형),
+    사이가 벌어진 날은 별도 그룹(투어형)으로 분리한다.
+    반환: [(start_iso, end_iso, first_day_index), ...]  (없으면 [])
+    """
+    from datetime import date as _date, timedelta
+    if not text:
+        return []
+    t = re.sub(r"[（(][^）)]*[）)]", "", text)          # (土)/(月・祝) 등 요일 괄호 제거
+    matches = re.findall(r"(?:(\d{4})年)?(?:(\d{1,2})月)?(\d{1,2})日", t)
+    y = m = None
+    days = []
+    for (yy, mm, dd) in matches:
+        if yy:
+            y = int(yy)
+        if mm:
+            m = int(mm)
+        if y and m:
+            try:
+                days.append(_date(y, m, int(dd)))
+            except ValueError:
+                pass
+    if not days:
+        return []
+    groups = [[0]]                                     # 각 그룹에 담긴 '날짜 인덱스'
+    for i in range(1, len(days)):
+        if days[i] - days[i - 1] == timedelta(days=1):
+            groups[-1].append(i)
+        else:
+            groups.append([i])
+    out = []
+    for g in groups:
+        out.append((days[g[0]].isoformat(), days[g[-1]].isoformat(), g[0]))
+    return out
+
+
+def split_venues(place):
+    """장소 문자열을 개별 장소 리스트로. (、 · ／ / 로 구분)"""
+    if not place:
+        return []
+    return [v.strip() for v in re.split(r"[、・／/]", place) if v.strip()]
+
+
 def parse_dot_date(text):
     m = re.search(r"(\d{4})\.(\d{1,2})\.(\d{1,2})", text or "")
     if not m:
@@ -166,7 +210,10 @@ def geocode(name, venues):
 # 파서
 # ----------------------------------------------------------------------------
 def parse_events_page(html):
-    """events/ 목록 페이지 → [dict] (title, start, end, place, url, category)."""
+    """events/ 목록 페이지 → [dict].
+    투어처럼 날짜가 여러 번(・로 나열, 사이가 벌어짐)이면 개최일 그룹마다 별도 행으로 분리하고,
+    장소도 날짜별로 나열되어 있으면 그룹에 맞춰 매칭한다.
+    """
     out = []
     for block in re.findall(r'<article class="p-live-event-list__item">(.*?)</article>',
                             html, re.S):
@@ -177,16 +224,45 @@ def parse_events_page(html):
         place_p = re.search(r'item-place">.*?</h2>\s*<p>(.*?)</p>', block, re.S)
         if not (hrefs and title):
             continue
-        s, e = parse_jp_date(date_p.group(1) if date_p else "")
-        out.append({
-            "title": strip_tags(title.group(1)),
-            "start": s,
-            "end": e or s,
-            "place": strip_tags(place_p.group(1)) if place_p else "",
-            "url": hrefs.group(1).strip(),
-            "category": strip_tags(cat.group(1)) if cat else "",
-            "note": "",
-        })
+
+        datetxt = date_p.group(1) if date_p else ""
+        place = strip_tags(place_p.group(1)) if place_p else ""
+        url = hrefs.group(1).strip()
+        title_txt = strip_tags(title.group(1))
+        cat_txt = strip_tags(cat.group(1)) if cat else ""
+
+        groups = parse_jp_date_groups(datetxt)
+        if not groups:
+            continue
+
+        venues = split_venues(place)
+        # 날짜 총 개수 (장소를 날짜별로 매칭할지 판단용)
+        n_days = sum(1 for _ in re.finditer(
+            r"\d{1,2}日", re.sub(r"[（(][^）)]*[）)]", "", datetxt)))
+        multi = len(groups) > 1
+
+        for gi, (s, e, day_idx) in enumerate(groups):
+            # 장소 매칭: 그룹 수와 장소 수가 같으면 그룹별, 날짜 수와 같으면 날짜별, 아니면 통째로
+            if venues and len(venues) == len(groups):
+                gplace = venues[gi]
+            elif venues and len(venues) == n_days and day_idx < len(venues):
+                gplace = venues[day_idx]
+            else:
+                gplace = place
+            # 분리된 투어는 제목만으론 구분이 안 되므로 개최일을 덧붙임
+            gtitle = title_txt
+            if multi:
+                mm, dd = s.split("-")[1:]
+                gtitle = f"{title_txt} ({int(mm)}/{int(dd)})"
+            out.append({
+                "title": gtitle,
+                "start": s,
+                "end": e or s,
+                "place": gplace,
+                "url": url + (f"#{s}" if multi else ""),   # URL 중복 방지용 앵커
+                "category": cat_txt,
+                "note": "",
+            })
     return out
 
 

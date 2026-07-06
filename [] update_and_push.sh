@@ -40,8 +40,10 @@ else
 fi
 
 # 4. Pull (merge remote changes)
+#    --no-edit: 머지 커밋 메시지 에디터(vim)가 떠서 멈추는 것 방지
+#    --no-rebase: pull 전략을 명시(divergent branches 에러 방지)
 echo "[+] Pulling from remote..."
-git pull
+git pull --no-rebase --no-edit
 if [ $? -ne 0 ]; then
     echo ""
     echo '###################################################'
