@@ -33,11 +33,11 @@ GEMINI_MODEL = "gemini-2.5-flash"   # 이 키에서 무료 쿼터가 열려 있�
 
 UA = "Mozilla/5.0 (bandori-overseas-scraper; +https://bang-dream.com)"
 
-# events/ 목록은 미래→과거 순으로 정렬되어 있다.
-# 과거 행사(종료일 < 오늘)가 누적 이만큼 나오면 더 볼 필요 없으므로 페이징 중단.
-EVENT_STOP_AFTER_PAST = 3
-# 만일을 위한 안전 상한 (무한 페이징 방지)
-EVENT_PAGE_CAP = 16
+# events/ 목록을 몇 페이지까지 훑을지. 조기중단 없이 끝까지 쭉 스캔한다.
+# (과거 행사는 어차피 종료일 기준으로 걸러지므로 페이지를 넉넉히 봐도 결과엔 미래분만 남음)
+EVENT_PAGE_CAP = 10
+# None 이면 조기중단 안 함. 숫자면 과거 행사 누적이 그만큼일 때 페이징 중단.
+EVENT_STOP_AFTER_PAST = None
 
 # news/ 에서 '오프라인/콜라보성'으로 볼 키워드 (하나라도 포함되면 후보)
 NEWS_INCLUDE = ["コラボ", "カフェ", "cafe", "キャンペーン", "フェア", "ポップアップ",
@@ -322,8 +322,8 @@ def collect_events():
         past_seen += page_past
         print(f"[+] events page {page}: {len(rows)}건 (지난 행사 누적 {past_seen})")
 
-        # 과거 행사가 충분히 나오면 뒤쪽은 전부 과거이므로 중단
-        if past_seen >= EVENT_STOP_AFTER_PAST:
+        # (선택) 과거 행사가 충분히 나오면 조기중단. EVENT_STOP_AFTER_PAST=None이면 끝까지.
+        if EVENT_STOP_AFTER_PAST is not None and past_seen >= EVENT_STOP_AFTER_PAST:
             print(f"[i] 지난 행사 {past_seen}건 도달 → events 페이징 중단")
             break
     return events
