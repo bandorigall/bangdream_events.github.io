@@ -7,6 +7,14 @@ set +H  # disable history expansion ('!' in strings stays literal)
 # 0. Move to the script's own directory (so it works from anywhere)
 cd "$(dirname "$0")" || exit 1
 
+# 0-b. [BETA] Scrape overseas events (bang-dream.com) -> 해외오프이벤/events_overseas.csv
+#      Failure here is non-fatal: the previous cached CSV is kept and the build goes on.
+echo "[+] Scraping overseas events (beta)..."
+python "해외오프이벤/scraper.py"
+if [ $? -ne 0 ]; then
+    echo "[i] Overseas scrape failed or skipped. Using cached events_overseas.csv."
+fi
+
 # 1. Rebuild index.html (run make_page.py)
 echo "[+] Building index.html (python -m make_page)..."
 python -m make_page

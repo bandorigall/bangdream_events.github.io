@@ -3,12 +3,12 @@ import json
 from datetime import datetime, timedelta
 import urllib.parse
 
-def generate_final_page(csv_filename, output_filename):
+def build_events_data(csv_filename):
+    """CSV 한 개를 읽어 events_data 리스트로 변환한다.
+    해외용 CSV처럼 '네이버지도'/'다음지도' 열이 없어도 안전하게 동작한다.
+    (해당 열이 없으면 map_targets에 n_link/k_link가 비어 버튼이 자동으로 안 나온다)
+    """
     events_data = []
-    
-    # 1. 현재 시간 (생성 시점 기록용)
-    now = datetime.now()
-    current_time_str = now.strftime("%Y.%m.%d %H:%M:%S")
 
     raw_rows = []
     try:
@@ -16,13 +16,12 @@ def generate_final_page(csv_filename, output_filename):
             reader = csv.DictReader(csvfile)
             for row in reader:
                 raw_rows.append(row)
-        
-        # [정렬 로직] '시작기간' 열을 기준으로 정렬
-        raw_rows.sort(key=lambda x: x.get('시작기간', '9999-12-31').strip())
-
     except FileNotFoundError:
-        print("ERROR: CSV file not found.")
-        return
+        print(f"[i] CSV file not found (skipped): {csv_filename}")
+        return events_data
+
+    # [정렬 로직] '시작기간' 열을 기준으로 정렬
+    raw_rows.sort(key=lambda x: x.get('시작기간', '9999-12-31').strip())
 
     # 정렬된 데이터를 바탕으로 events_data 생성
     for idx, row in enumerate(raw_rows):
@@ -133,8 +132,21 @@ def generate_final_page(csv_filename, output_filename):
             'has_goods': ('콜라보 카페' in title)
         })
 
+    return events_data
+
+
+def generate_final_page(korea_csv, overseas_csv, output_filename):
+    # 1. 현재 시간 (생성 시점 기록용)
+    now = datetime.now()
+    current_time_str = now.strftime("%Y.%m.%d %H:%M:%S")
+
+    # 한국 / 해외 두 데이터셋 빌드
+    korea_events = build_events_data(korea_csv)
+    overseas_events = build_events_data(overseas_csv)
+
     # JSON 데이터 생성
-    json_data = json.dumps(events_data, ensure_ascii=False)
+    json_korea = json.dumps(korea_events, ensure_ascii=False)
+    json_overseas = json.dumps(overseas_events, ensure_ascii=False)
 
     # -----------------------------------------------------------
     # 콜라보 카페 굿즈/메뉴 계산기 데이터
@@ -362,13 +374,39 @@ def generate_final_page(csv_filename, output_filename):
             z-index: 10;
         }}
         
-        h1.page-title {{ 
-            font-size: 1.8rem; 
-            margin: 0 0 25px 0; 
-            color: var(--accent); 
-            font-weight: 800; 
-            text-align: center; 
-            flex-shrink: 0; 
+        h1.page-title {{
+            font-size: 1.8rem;
+            margin: 0 0 18px 0;
+            color: var(--accent);
+            font-weight: 800;
+            text-align: center;
+            flex-shrink: 0;
+        }}
+
+        .tab-bar {{
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+            flex-shrink: 0;
+        }}
+        .tab-btn {{
+            flex: 1;
+            padding: 12px 10px;
+            border: 2px solid #eee;
+            background: #fafafa;
+            color: #888;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }}
+        .tab-btn:hover {{ border-color: var(--accent); color: var(--accent); }}
+        .tab-btn.active {{
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(233, 30, 99, 0.2);
         }}
         
         .card-list-container {{
@@ -499,7 +537,11 @@ def generate_final_page(csv_filename, output_filename):
 <body>
 
 <div class="left-panel">
-    <h1 class="page-title">BanG Dream!<br>한국 오프라인 이벤트 목록</h1>
+    <h1 class="page-title" id="page-title">BanG Dream!<br>한국 오프라인 이벤트 목록</h1>
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="korea" onclick="switchTab('korea')">🇰🇷 국내</button>
+        <button class="tab-btn" data-tab="overseas" onclick="switchTab('overseas')">🌏 해외</button>
+    </div>
     <div class="card-list-container">
         <div id="card-list"></div>
     </div>
@@ -527,7 +569,14 @@ def generate_final_page(csv_filename, output_filename):
 </div>
 
 <script>
-    const rawEvents = {json_data};
+    const DATASETS = {{ korea: {json_korea}, overseas: {json_overseas} }};
+    const TAB_META = {{
+        korea:    {{ title: 'BanG Dream!<br>한국 오프라인 이벤트 목록',   center: [37.5665, 126.9780], zoom: 11 }},
+        overseas: {{ title: 'BanG Dream!<br>해외 오프라인 이벤트 목록',   center: [35.6812, 139.7671], zoom: 4 }}
+    }};
+
+    let currentTab = 'korea';
+    let rawEvents = DATASETS[currentTab];
     let events = [];
     let map = null;
     let calendar = null;
@@ -536,7 +585,8 @@ def generate_final_page(csv_filename, output_filename):
     document.addEventListener('DOMContentLoaded', function() {{
         filterEventsByCurrentDate();
 
-        map = L.map('map').setView([37.5665, 126.9780], 11);
+        const meta = TAB_META[currentTab];
+        map = L.map('map').setView(meta.center, meta.zoom);
         L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
             attribution: '© OpenStreetMap'
         }}).addTo(map);
@@ -554,6 +604,38 @@ def generate_final_page(csv_filename, output_filename):
         calendar.render();
         renderCards();
     }});
+
+    function switchTab(tab) {{
+        if (tab === currentTab) return;
+        currentTab = tab;
+        rawEvents = DATASETS[tab];
+
+        // 탭 버튼 / 제목 갱신
+        document.querySelectorAll('.tab-btn').forEach(b => {{
+            b.classList.toggle('active', b.dataset.tab === tab);
+        }});
+        document.getElementById('page-title').innerHTML = TAB_META[tab].title;
+
+        // 데이터 다시 필터링
+        filterEventsByCurrentDate();
+
+        // 마커 / 상세 패널 초기화
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        document.getElementById('info-panel').innerHTML =
+            '<div class="empty-msg">이벤트를 선택하면<br>여기에 상세 정보가 나옵니다!</div>';
+
+        // 지도 기본 위치로
+        const meta = TAB_META[tab];
+        map.setView(meta.center, meta.zoom);
+        setTimeout(() => map.invalidateSize(), 100);
+
+        // 캘린더 이벤트 교체
+        calendar.getEvents().forEach(e => e.remove());
+        getAllCalendarEvents().forEach(e => calendar.addEvent(e));
+
+        renderCards();
+    }}
 
     function filterEventsByCurrentDate() {{
         const now = new Date();
@@ -696,4 +778,5 @@ def generate_final_page(csv_filename, output_filename):
     print(f"'{output_filename}' build complete. (data updated: {current_time_str})")
 
 if __name__ == "__main__":
-    generate_final_page('events.csv', 'index.html')
+    # 해외(베타)는 별도 폴더의 스크래퍼가 생성한 CSV를 읽는다. 없으면 자동으로 빈 탭.
+    generate_final_page('events.csv', '해외오프이벤/events_overseas.csv', 'index.html')
