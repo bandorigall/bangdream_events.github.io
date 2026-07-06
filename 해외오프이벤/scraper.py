@@ -27,6 +27,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 VENUES_PATH = os.path.join(HERE, "venues.json")
 OUT_CSV = os.path.join(HERE, "events_overseas.csv")
 MANUAL_CSV = os.path.join(HERE, "manual_overseas.csv")
+SUMMARIES_PATH = os.path.join(HERE, "summaries.json")     # URL→한국어요약 캐시
+GEMINI_KEY_PATH = os.path.join(HERE, "gemini_apikey.txt")  # 무료 Gemini API 키(커밋 금지)
+GEMINI_MODEL = "gemini-2.5-flash"   # 이 키에서 무료 쿼터가 열려 있는 모델
 
 UA = "Mozilla/5.0 (bandori-overseas-scraper; +https://bang-dream.com)"
 
@@ -371,6 +374,149 @@ def collect_news():
 
 
 # ----------------------------------------------------------------------------
+# Gemini 요약 (무료 API, '단 한 번'의 배치 호출로 새 이벤트만 요약)
+# ----------------------------------------------------------------------------
+def load_gemini_key():
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if key:
+        return key
+    try:
+        with open(GEMINI_KEY_PATH, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def load_summaries():
+    if os.path.exists(SUMMARIES_PATH):
+        try:
+            with open(SUMMARIES_PATH, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
+
+
+def save_summaries(cache):
+    try:
+        with open(SUMMARIES_PATH, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except OSError as ex:                              # noqa: BLE001
+        print(f"[i] summaries.json 저장 실패(무시): {ex}")
+
+
+def base_url(url):
+    """분리된 투어 행의 #앵커를 떼어 상세페이지 URL로 통일."""
+    return (url or "").split("#", 1)[0]
+
+
+def _detail_excerpt(url, limit=700):
+    """상세페이지 본문에서 요약 재료가 될 앞부분 텍스트만 뽑는다. 실패 시 ''."""
+    try:
+        text = strip_tags(fetch(url))
+    except Exception:                                 # noqa: BLE001
+        return ""
+    # 공통 헤더/사이트명 잡음 제거 후 앞부분만
+    text = text.replace("BanG Dream!（バンドリ！）公式サイト", "").strip()
+    return text[:limit]
+
+
+def gemini_summarize_batch(items, key):
+    """items: [(idx, title, place, date, excerpt)] → {idx: '한국어 한 줄 요약'}.
+    딱 1회의 API 호출. 어떤 예외든 던지지 않고 빈 dict/부분 dict를 반환한다.
+    """
+    if not items or not key:
+        return {}
+
+    lines = []
+    for idx, title, place, datestr, excerpt in items:
+        lines.append(
+            f"[{idx}] 제목: {title}\n"
+            f"    기간: {datestr} / 장소: {place or '미상'}\n"
+            f"    본문발췌: {excerpt or '(없음)'}"
+        )
+    joined = "\n\n".join(lines)
+
+    prompt = (
+        "너는 일본 '뱅드림!(BanG Dream!)' 오프라인 이벤트 정보를 한국 팬에게 안내하는 편집자다.\n"
+        "아래 각 이벤트를 한국어 한 문장(35자 이내)으로 요약하라.\n"
+        "규칙:\n"
+        "- 홍보성 수식어·감탄사 빼고 '무엇을 하는 행사인지' 핵심만 (라이브/콜라보 카페/전시/물판 등).\n"
+        "- 밴드명·아티스트명은 그대로, 장소/날짜는 이미 아니까 요약에 억지로 넣지 말 것.\n"
+        "- 본문발췌가 비었거나 불명확하면 제목만으로 추정해 요약.\n"
+        "- 반드시 JSON 배열로만 답한다. 형식: [{\"i\": 번호, \"summary\": \"요약\"}]\n\n"
+        f"{joined}"
+    )
+
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2},
+    }
+    endpoint = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{GEMINI_MODEL}:generateContent?key={key}")
+    try:
+        req = Request(endpoint, data=json.dumps(body).encode("utf-8"),
+                      headers={"Content-Type": "application/json"}, method="POST")
+        with urlopen(req, timeout=60) as r:
+            resp = json.loads(r.read().decode("utf-8", "replace"))
+        text = resp["candidates"][0]["content"]["parts"][0]["text"]
+        parsed = json.loads(text)
+    except Exception as ex:                            # noqa: BLE001
+        print(f"[i] Gemini 요약 실패(무시하고 진행): {ex}")
+        return {}
+
+    out = {}
+    if isinstance(parsed, list):
+        for obj in parsed:
+            try:
+                out[int(obj["i"])] = str(obj["summary"]).strip()
+            except (KeyError, ValueError, TypeError):
+                continue
+    return out
+
+
+def attach_summaries(dedup):
+    """dedup 이벤트들의 note(비고)에 한국어 요약을 채운다.
+    캐시에 없는 URL만 모아 '한 번의' Gemini 호출로 처리한다. 실패해도 조용히 넘어간다.
+    """
+    key = load_gemini_key()
+    cache = load_summaries()
+
+    # 캐시에 없는(=새) 이벤트만 요약 대상. base_url 기준으로 중복 요약 방지.
+    todo, seen_urls = [], set()
+    for e in dedup:
+        bu = base_url(e.get("url", ""))
+        if not bu or bu in cache or bu in seen_urls:
+            continue
+        seen_urls.add(bu)
+        todo.append(e)
+
+    if todo and key:
+        print(f"[+] Gemini 요약 대상 {len(todo)}건 → 상세페이지 수집 후 1회 호출")
+        items = []
+        for i, e in enumerate(todo):
+            excerpt = _detail_excerpt(base_url(e["url"]))
+            items.append((i, e.get("title", ""), e.get("place", ""),
+                          f"{e.get('start','')}~{e.get('end','')}", excerpt))
+            time.sleep(0.3)                            # 상세페이지에 대한 예의
+        result = gemini_summarize_batch(items, key)
+        for i, e in enumerate(todo):
+            s = result.get(i, "").strip()
+            if s:
+                cache[base_url(e["url"])] = s
+        if result:
+            save_summaries(cache)
+    elif todo and not key:
+        print("[i] Gemini 키 없음 → 요약 생략 (gemini_apikey.txt 확인)")
+
+    # 캐시된 요약을 note에 병합 (기존 note가 있으면 ' · '로 이어 붙임)
+    for e in dedup:
+        s = cache.get(base_url(e.get("url", "")), "")
+        if s:
+            e["note"] = f"{e['note']} · {s}" if e.get("note") else s
+
+
+# ----------------------------------------------------------------------------
 # 병합 / 저장
 # ----------------------------------------------------------------------------
 def read_manual():
@@ -422,6 +568,12 @@ def main():
     for e in dedup:
         e["coord"] = geocode(e.get("place", ""), venues) if e.get("place") else ""
     save_venues(venues)
+
+    # Gemini로 설명(비고) 자동 요약 — 새 이벤트가 있을 때만 단 1회 호출
+    try:
+        attach_summaries(dedup)
+    except Exception as ex:                            # noqa: BLE001
+        print(f"[i] 요약 단계 예외(무시): {ex}")
 
     # 수동 데이터 병합 (같은 URL이면 수동 우선, URL 없으면 그냥 추가)
     manual = read_manual()
