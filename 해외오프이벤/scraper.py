@@ -242,8 +242,9 @@ def parse_events_page(html):
         # 날짜 총 개수 (장소를 날짜별로 매칭할지 판단용)
         n_days = sum(1 for _ in re.finditer(
             r"\d{1,2}日", re.sub(r"[（(][^）)]*[）)]", "", datetxt)))
-        multi = len(groups) > 1
 
+        # 날짜그룹마다 별도 행으로 분리. 제목 접미사는 여기서 붙이지 않는다.
+        # (과거 필터·중복 제거 후 '같은 제목이 2건 이상 남을 때'만 뒤에서 장소를 붙임)
         for gi, (s, e, day_idx) in enumerate(groups):
             # 장소 매칭: 그룹 수와 장소 수가 같으면 그룹별, 날짜 수와 같으면 날짜별, 아니면 통째로
             if venues and len(venues) == len(groups):
@@ -252,17 +253,12 @@ def parse_events_page(html):
                 gplace = venues[day_idx]
             else:
                 gplace = place
-            # 분리된 투어는 제목만으론 구분이 안 되므로 개최일을 덧붙임
-            gtitle = title_txt
-            if multi:
-                mm, dd = s.split("-")[1:]
-                gtitle = f"{title_txt} ({int(mm)}/{int(dd)})"
             out.append({
-                "title": gtitle,
+                "title": title_txt,
                 "start": s,
                 "end": e or s,
                 "place": gplace,
-                "url": url + (f"#{s}" if multi else ""),   # URL 중복 방지용 앵커
+                "url": url,
                 "category": cat_txt,
                 "note": "",
             })
@@ -344,32 +340,23 @@ def collect_news():
 
     out = []
     for n in candidates:
-        s = e = n["pub"]
-        note = ""
+        # 상세페이지에서 '실제 개최 기간'을 뽑아낸 것만 채택한다.
+        # 못 뽑으면 기간을 지어내지 않고 그냥 건너뛴다 (게시일/임의 기간 사용 금지).
         try:
-            detail = fetch(n["url"])
-            ds, de = extract_period_from_detail(detail)
-            if ds:
-                s, e = ds, de
-            else:
-                note = "기간 미확정(게시일 기준)"
+            ds, de = extract_period_from_detail(fetch(n["url"]))
         except Exception as ex:                       # noqa: BLE001
             print(f"    [news detail] {n['url']} 실패: {ex}")
-            note = "기간 미확정(게시일 기준)"
-        # 기간을 못 잡았으면 게시일 + 90일을 임시 종료로 (목록에서 바로 사라지지 않게)
-        if s and e == s and note:
-            from datetime import date, timedelta
-            try:
-                y, m, d = map(int, s.split("-"))
-                e = (date(y, m, d) + timedelta(days=90)).isoformat()
-            except ValueError:
-                pass
+            ds = de = None
+        if not ds:
+            print(f"    [news skip] 기간 파악 불가 → 제외: {n['title'][:40]}")
+            time.sleep(0.3)
+            continue
         out.append({
-            "title": n["title"], "start": s, "end": e,
+            "title": n["title"], "start": ds, "end": de or ds,
             "place": "", "url": n["url"], "category": n.get("category", ""),
-            "note": note,
+            "note": "",
         })
-        time.sleep(0.4)
+        time.sleep(0.3)
     return out
 
 
@@ -482,13 +469,14 @@ def attach_summaries(dedup):
     key = load_gemini_key()
     cache = load_summaries()
 
-    # 캐시에 없는(=새) 이벤트만 요약 대상. base_url 기준으로 중복 요약 방지.
-    todo, seen_urls = [], set()
+    # 캐시에 없는(=새) 이벤트만 요약 대상.
+    #   키는 '제목' — 같은 URL을 공유하는 별개 공연(13th DAY1/2/3)도 각자 요약되게 한다.
+    todo, seen_titles = [], set()
     for e in dedup:
-        bu = base_url(e.get("url", ""))
-        if not bu or bu in cache or bu in seen_urls:
+        t = e.get("title", "")
+        if not t or t in cache or t in seen_titles:
             continue
-        seen_urls.add(bu)
+        seen_titles.add(t)
         todo.append(e)
 
     if todo and key:
@@ -503,7 +491,7 @@ def attach_summaries(dedup):
         for i, e in enumerate(todo):
             s = result.get(i, "").strip()
             if s:
-                cache[base_url(e["url"])] = s
+                cache[e["title"]] = s
         if result:
             save_summaries(cache)
     elif todo and not key:
@@ -511,7 +499,7 @@ def attach_summaries(dedup):
 
     # 캐시된 요약을 note에 병합 (기존 note가 있으면 ' · '로 이어 붙임)
     for e in dedup:
-        s = cache.get(base_url(e.get("url", "")), "")
+        s = cache.get(e.get("title", ""), "")
         if s:
             e["note"] = f"{e['note']} · {s}" if e.get("note") else s
 
@@ -542,6 +530,35 @@ def to_csv_row(ev):
     }
 
 
+def _venue_short(place):
+    """접미사용으로 장소명을 짧게. 괄호 보충설명·부가 장소 제거 후 앞부분만."""
+    p = re.split(r"[、・／,]", place)[0]              # 첫 장소만
+    p = re.sub(r"[（(][^）)]*[）)]", "", p).strip()    # (보충설명) 제거
+    return p[:16]
+
+
+def apply_tour_suffix(dedup):
+    """같은 제목이 2건 이상(=지역/날짜를 옮겨 다니는 투어)일 때만
+    각 행 제목 뒤에 '(장소)'를 붙여 구분한다. 장소가 없으면 '(M/D)'.
+    한 건만 남는 제목(양일 라이브 등)은 그대로 둔다.
+    """
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for e in dedup:
+        groups[e["title"]].append(e)
+    for title, evs in groups.items():
+        if len(evs) <= 1:
+            continue
+        for e in evs:
+            place = _venue_short(e.get("place", ""))
+            if place:
+                suffix = place
+            else:
+                mm, dd = e["start"].split("-")[1:]
+                suffix = f"{int(mm)}/{int(dd)}"
+            e["title"] = f"{title} ({suffix})"
+
+
 def main():
     print("=== BanG Dream! 해외 이벤트 수집 시작 ===")
     scraped = collect_events() + collect_news()
@@ -551,17 +568,23 @@ def main():
     today = date.today().isoformat()
     scraped = [e for e in scraped
                if e.get("start") and (e.get("end") or e["start"]) >= today]
-    # URL 기준 중복 제거 (먼저 온 events/ 우선)
+    # 중복 제거: (제목, 시작일) 기준.
+    #   같은 URL이라도 제목이 다르면(13th LIVE DAY1/2/3처럼 출연진이 다른 공연) 살린다.
     seen, dedup = set(), []
     for e in scraped:
-        if e["url"] in seen:
+        k = (e["title"], e.get("start"))
+        if k in seen:
             continue
-        seen.add(e["url"])
+        seen.add(k)
         dedup.append(e)
 
     if not dedup:
         print("[!] 수집 결과 없음(네트워크 문제 가능). 기존 CSV 유지.")
         return 0
+
+    # 투어 접미사: 같은 제목이 2건 이상 남았을 때만 뒤에 '(장소)'를 붙여 구분한다.
+    #   (한 건만 남으면 양일 라이브 등이므로 접미사 없음)
+    apply_tour_suffix(dedup)
 
     # 지오코딩
     venues = load_venues()
