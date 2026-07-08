@@ -769,6 +769,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     {goods_js}
 </script>
 {modal_html}
+<script src="nav.js"></script>
 </body>
 </html>
 """
