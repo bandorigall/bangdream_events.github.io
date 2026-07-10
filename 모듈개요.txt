@@ -1,0 +1,75 @@
+================================================================
+한국오프이벤 (bangdream_events.github.io) — 모듈 개요 (기술 명세)
+================================================================
+
+0. 목적
+  BanG Dream! 오프라인 이벤트(국내/해외)를 캘린더 + 카드 리스트 + 지도로
+  통합 제공한다. 콜라보 카페 이벤트에는 굿즈·메뉴 계산기(장바구니/특전 자동
+  산출) 모달을 추가로 노출한다. 해외 탭 데이터는 별도 스크래퍼(베타)가 수집.
+  배포: GitHub Pages. 산출물은 index.html 단일 파일.
+
+1. 저장소 구성
+  events.csv               국내 이벤트 입력(단일 소스). UTF-8.
+  make_page.py             빌드 스크립트(국내+해외 CSV → index.html).
+  index.html               빌드 산출물(정적). FullCalendar + Leaflet(CDN).
+  assets/                  콜라보 카페 굿즈/메뉴 썸네일·원본·특전 이미지.
+  nav.js                   공통 상단 네비게이션 바.
+  make_page.bat            빌드 배치.
+  [] update_and_push.sh    빌드→커밋→푸시→사이트 오픈 자동화.
+  사용법.txt / 하이퍼링크.txt
+  해외오프이벤/             해외(일본) 자동 수집 서브모듈(자체 .gitignore).
+      scraper.py           bang-dream.com events/news 스크래퍼(stdlib only).
+      events_overseas.csv  스크래퍼 산출(국내 CSV와 동일 포맷).
+      manual_overseas.csv  수동 보정 데이터(같은 URL이면 우선).
+      venues.json          장소명→좌표 지오코딩 캐시(Nominatim).
+      summaries.json       URL→한국어 요약 캐시(Gemini).
+      gemini_apikey.txt    무료 Gemini 키(커밋 금지).
+
+2. 입력 스키마 (events.csv / events_overseas.csv 공통)
+    이벤트명, 시작기간(YYYY-MM-DD), 종료기간(YYYY-MM-DD),
+    장소(콤마 구분 다중), 네이버지도(JSON 배열/"검색"),
+    다음지도(JSON 배열/"검색"), 좌표(JSON 배열 "lat, lng"),
+    통합정보모음("라벨|URL" 또는 URL/JSON 배열),
+    비고, 예매처(통합정보모음과 동일 형식)
+  해외 CSV는 네이버/다음지도 열이 없어도 안전(map_targets에서 자동 생략).
+
+3. 빌드 파이프라인 (make_page.py)
+  3.1 build_events_data(csv):
+      - 시작기간 기준 정렬. 종료기간+1일 = cal_end(FullCalendar 종료 배타적 처리).
+      - safe_json_load: JSON 배열 파싱, 실패 시 평문을 [text]로 감쌈.
+      - parse_main_links: "라벨|URL" 분해 → {label,url} 리스트(통합정보/예매처 공용).
+      - map_targets 조립: 장소명·네이버·카카오·좌표 리스트를 최대 길이에 맞춰
+        zip. 지도값 '검색'이면 장소명 인코딩 검색 URL 생성.
+        n_link/k_link/좌표 중 하나라도 있으면 타깃 추가.
+      - has_goods = 제목에 '콜라보 카페' 포함 여부(계산기 버튼 노출 플래그).
+  3.2 generate_final_page: 국내/해외 두 데이터셋을 DATASETS로 인라인,
+      콜라보 카페 굿즈/메뉴 데이터(cafe_goods)와 특전 이미지(cafe_bonus)를
+      goods_js에 치환 주입. 빌드 시각 기록.
+
+4. 프런트엔드 동작 (index.html 인라인 JS)
+  - 레이아웃: 좌(탭 국내/해외 + 카드 그리드) / 우(상: FullCalendar, 하: 상세+지도).
+  - filterEventsByCurrentDate(): 종료기간 >= 오늘인 이벤트만 표시(지난 행사 숨김).
+  - switchTab(): 국내↔해외 전환 시 데이터/제목/지도 중심·줌/캘린더 이벤트 교체.
+      TAB_META: korea 중심 서울 z11 / overseas 중심 도쿄 z4.
+  - selectEvent(): 카드·캘린더·지도 3자 동기화. 선택 이벤트 캘린더 강조색(#ff4081),
+      map_targets 마커 표시 + fitBounds, 상세 패널에 지도버튼/통합정보/예매/굿즈버튼 조립.
+  - 굿즈·메뉴 계산기(gm-*): 장바구니 수량 관리 + 특전 자동 계산:
+      · 메뉴 1개당 코스터 1장.
+      · 4만원당 홀로그램 엽서 1장, 8만원당 A3 포스터 1장.
+      · 돌로리스 생일 엽서: 2026-06-26~07-02 기간 & bday 대상 상품 담을 때 증정.
+      썸네일 클릭 시 원본 라이트박스.
+
+5. 해외 스크래퍼 (해외오프이벤/scraper.py) — 베타
+  - 수집원: bang-dream.com/events/(라이브·이벤트 카드) + /news/(오프라인성 공지
+    키워드 필터: コラボ/カフェ/ポップアップ/展示 등).
+  - 지오코딩: 일본어 장소명 → OSM Nominatim → venues.json 캐시.
+  - 요약: 공지 URL → Gemini(gemini-2.5-flash)로 한국어 요약 → summaries.json 캐시.
+  - 출력: events_overseas.csv(국내 포맷 동일). manual_overseas.csv 병합(수동 우선).
+  - stdlib만 사용. 네트워크 실패 시 기존 CSV 미덮어쓰기(안전).
+  - EVENT_PAGE_CAP=10 페이지 스캔(과거분은 종료일 필터로 자연 제거).
+
+6. 설계 결정/제약
+  - 국내/해외를 동일 CSV 스키마로 통일 → 빌드/렌더 코드 완전 공유.
+  - cal_end = 종료+1일: FullCalendar의 end 배타 규칙 보정.
+  - 굿즈 계산기 특전 규칙은 실제 카페 규정을 코드에 하드코딩(기간 한정 포함).
+  - Gemini 키는 gitignore로 커밋 차단(개인 무료 쿼터).
