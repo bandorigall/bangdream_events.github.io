@@ -65,6 +65,9 @@ fi
 echo ""
 echo '[OK] Rebuilt index.html + committed + pushed successfully.'
 
+# push_all.sh 등에서 SKIP_DEPLOY_WAIT=1 로 부르면 배포 대기/브라우저 열기 없이 즉시 종료
+[ -n "$SKIP_DEPLOY_WAIT" ] && exit 0
+
 # 6. Wait for the GitHub Pages deploy of THIS commit to finish, then open browser
 URL="https://bandorigall.github.io/bangdream_events.github.io/"
 REPO="bandorigall/bangdream_events.github.io"
