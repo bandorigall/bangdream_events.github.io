@@ -263,6 +263,7 @@ def parse_events_page(html):
                 "url": url,
                 "category": cat_txt,
                 "note": "",
+                "src": "event",
             })
     return out
 
@@ -356,7 +357,7 @@ def collect_news():
         out.append({
             "title": n["title"], "start": ds, "end": de or ds,
             "place": "", "url": n["url"], "category": n.get("category", ""),
-            "note": "",
+            "note": "", "src": "news",
         })
         time.sleep(0.3)
     return out
@@ -536,7 +537,14 @@ def _venue_short(place):
     """접미사용으로 장소명을 짧게. 괄호 보충설명·부가 장소 제거 후 앞부분만."""
     p = re.split(r"[、・／,]", place)[0]              # 첫 장소만
     p = re.sub(r"[（(][^）)]*[）)]", "", p).strip()    # (보충설명) 제거
-    return p[:16]
+    # 너무 길면 줄이되, 라틴문자 이름이 단어 중간에서 잘리지 않게 공백 경계에서 자른다.
+    LIMIT = 24
+    if len(p) <= LIMIT:
+        return p
+    cut = p[:LIMIT]
+    if " " in cut and re.search(r"[A-Za-z]", p):
+        cut = cut.rsplit(" ", 1)[0]
+    return cut.strip()
 
 
 def apply_tour_suffix(dedup):
@@ -570,6 +578,13 @@ def main():
     today = date.today().isoformat()
     scraped = [e for e in scraped
                if e.get("start") and (e.get("end") or e["start"]) >= today]
+    # news 유래 행 중, 같은 URL이 events 목록에도 있으면 버린다.
+    #   (news 제목은 "…의 출연이 결정" 같은 기사 문장이라 행사명으로 부적절하고,
+    #    events 쪽이 장소·날짜까지 갖춘 정식 행이라 그쪽만 남기면 된다.)
+    event_urls = {e["url"] for e in scraped if e.get("src") != "news"}
+    scraped = [e for e in scraped
+               if e.get("src") != "news" or e["url"] not in event_urls]
+
     # 중복 제거: (제목, 시작일) 기준.
     #   같은 URL이라도 제목이 다르면(13th LIVE DAY1/2/3처럼 출연진이 다른 공연) 살린다.
     seen, dedup = set(), []
