@@ -15,6 +15,7 @@ stdlib만 사용. 네트워크 실패 시 기존 CSV를 덮어쓰지 않고 그�
 
 import re
 import os
+import html as html_mod
 import csv
 import json
 import time
@@ -63,7 +64,8 @@ def strip_tags(html):
     html = re.sub(r"<script.*?</script>", " ", html, flags=re.S)
     html = re.sub(r"<style.*?</style>", " ", html, flags=re.S)
     text = re.sub(r"<[^>]+>", " ", html)
-    text = re.sub(r"&nbsp;", " ", text)
+    # HTML 엔티티 복원(&#039; &amp; 등). &nbsp; 는 일반 공백으로.
+    text = html_mod.unescape(text).replace("\xa0", " ")
     return re.sub(r"\s+", " ", text).strip()
 
 
