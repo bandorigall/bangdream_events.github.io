@@ -131,7 +131,8 @@ def build_events_data(csv_filename):
             # 콜라보 카페 이벤트에만 굿즈/메뉴 계산기 버튼을 노출
             'has_goods': ('콜라보 카페' in title),
             # 코믹월드 335(아워 노트 ZA02 부스)에만 부스 가이드 버튼을 노출
-            'has_cw': ('코믹월드 335' in title)
+            # (사설 부스 행은 공식 굿즈 데이터와 무관하므로 '아워 노트' 조건으로 배제)
+            'has_cw': ('코믹월드 335' in title and '아워 노트' in title)
         })
 
     return events_data
