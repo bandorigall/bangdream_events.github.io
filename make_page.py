@@ -129,7 +129,9 @@ def build_events_data(csv_filename):
             'ticket_links': ticket_links,
             'note': note,
             # 콜라보 카페 이벤트에만 굿즈/메뉴 계산기 버튼을 노출
-            'has_goods': ('콜라보 카페' in title)
+            'has_goods': ('콜라보 카페' in title),
+            # 코믹월드 335(아워 노트 ZA02 부스)에만 부스 가이드 버튼을 노출
+            'has_cw': ('코믹월드 335' in title)
         })
 
     return events_data
@@ -173,6 +175,83 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     }
     cafe_bonus_json = json.dumps(cafe_bonus, ensure_ascii=False)
 
+    # -----------------------------------------------------------
+    # 코믹월드 335 일산 · 아워 노트 ZA02 부스 데이터
+    # 출처: 공식 X(@bangdreamon_KR) 2026-08-07 참가 정보 공개 이미지 2장
+    # CT/CS: 크롭 썸네일 / 원본(라이트박스)
+    # -----------------------------------------------------------
+    CT = 'assets/comicw335/thumb/'
+    CS = 'assets/comicw335/source/'
+    # 캐릭터 아크릴 스탠드 25종 (공지 이미지 배치 순서 = 밴드 순서)
+    cw_chars = [
+        ('takamatsu_tomori', '타카마츠 토모리'), ('chihaya_anon', '치하야 아논'),
+        ('kaname_rana', '카나메 라나'),          ('nagasaki_soyo', '나가사키 소요'),
+        ('shiina_taki', '시이나 타키'),          ('misumi_uika', '미스미 우이카'),
+        ('wakaba_mutsumi', '와카바 무츠미'),     ('yahata_umiri', '야하타 우미리'),
+        ('yutenji_nyamu', '유텐지 냐무'),        ('togawa_sakiko', '토가와 사키코'),
+        ('nakamachi_arare', '나카마치 아라레'),  ('miyanaga_nonoka', '미야나가 노노카'),
+        ('minetsuki_ritsu', '미네츠키 리츠'),    ('fuji_miyako', '후지 미야코'),
+        ('sengoku_yuno', '센고쿠 유노'),         ('shiomi_hotaru', '시오미 호타루'),
+        ('izawa_natsume', '이자와 나츠메'),      ('kotohira_nagi', '코토히라 나기'),
+        ('hamasaki_mahoro', '하마사키 마호로'),  ('izumi_houka', '이즈미 호우카'),
+        ('suga_raika', '스가 라이카'),           ('mahashi_miku', '마하시 미쿠'),
+        ('yakura_yomogi', '야쿠라 요모기'),      ('umezato_chieri', '우메자토 치에리'),
+        ('shinomiya_shizuku', '시노미야 시즈쿠'),
+    ]
+    cw_goods = [
+        {'id': 'acryl_' + cid, 'cat': '캐릭터 아크릴 스탠드 (₩24,000 · 총 25종)',
+         'name': kname, 'price': 24000, 'size': '본체 약 W80×H150mm / 받침대 약 W60×H45mm',
+         'thumb': CT + 'acryl_' + cid + '.jpg', 'full': CS + 'sale.jpg'}
+        for cid, kname in cw_chars
+    ] + [
+        {'id': 'acryl_bg', 'cat': '그 외 판매 굿즈', 'name': '배경 아크릴 스탠드 (1종)',
+         'price': 26000, 'size': '약 W210×H150mm',
+         'thumb': CT + 'acryl_background.jpg', 'full': CS + 'sale.jpg'},
+        {'id': 'holderfile', 'cat': '그 외 판매 굿즈', 'name': '홀더파일 (1종)',
+         'price': 6000, 'size': 'A4',
+         'thumb': CT + 'holderfile.jpg', 'full': CS + 'sale.jpg'},
+    ]
+    # 현장 이벤트: 조건 체크 → 받을 수 있는 증정 굿즈 자동 계산
+    cw_missions = [
+        {'id': 'preorder', 'label': '사전예약 완료 화면 인증',
+         'desc': '부스에서 사전예약 완료 화면을 보여주면 증정',
+         'gives': [['hologram', 1]]},
+        {'id': 'sns', 'label': '부스 사진·영상 SNS 업로드',
+         'desc': '#뱅드림 #아워노트 해시태그와 함께 업로드 시 추가 증정',
+         'gives': [['hologram', 1]]},
+        {'id': 'live_join', 'label': '프리 라이브 참가 (공식 계정 팔로우)',
+         'desc': '플랫폼 무관 공식 계정 팔로우 + 게임 내 프리 라이브 도전',
+         'gives': [['hologram', 1]]},
+        {'id': 'live_fc', 'label': '프리 라이브 풀 콤보(FC) 달성',
+         'desc': '난이도와 관계없이 FC 달성 시 추가 증정',
+         'gives': [['holderfile', 1]]},
+        {'id': 'live_fc27', 'label': '난이도 27 이상 + 풀 콤보(FC)',
+         'desc': '고난도 FC 달성 시 추가 증정',
+         'gives': [['diary', 1]]},
+    ]
+    cw_prizes = {
+        'hologram':   {'name': '아워 노트 보컬 홀로그램 티켓 (무작위 1종)', 'thumb': CT + 'prize_hologram.jpg'},
+        'holderfile': {'name': '아워 노트 보컬 홀더파일 (무작위 1종)',      'thumb': CT + 'prize_holderfile.jpg'},
+        'diary':      {'name': '아워 노트 밴드 다이어리 (무작위 1종)',      'thumb': CT + 'prize_diary.jpg'},
+    }
+    cw_info = {
+        'booth': 'ZA02',
+        'place': '일산 킨텍스 제1전시장',
+        'date': '2026.08.15(토) ~ 08.16(일)',
+        'limit': 5,
+        'event_img': CS + 'event.jpg',
+        'sale_img': CS + 'sale.jpg',
+        'rules': [
+            '현장 판매 구역 혼잡 방지를 위해 구매 시간을 적절히 분산해 주세요.',
+            '1인 1회 대기 기준, <b>품목별 최대 5개</b>까지 구매 가능합니다.',
+            '상품은 매일 준비된 수량 한정 판매이며, 당일 품절분은 다음 날 재입고될 수 있습니다.',
+            '결제 후 현장에서 상품 상태 확인 필수 · <b>부스를 벗어난 이후에는 교환/환불 불가</b>입니다.',
+            '이벤트 증정 굿즈도 매일 수량이 한정되어 있으며 선착순 증정입니다.',
+        ],
+    }
+    cw_json = json.dumps({'goods': cw_goods, 'missions': cw_missions,
+                          'prizes': cw_prizes, 'info': cw_info}, ensure_ascii=False)
+
     # 추가 CSS (일반 문자열 → 중괄호 그대로 사용)
     extra_css = """
         /* ===== 굿즈 계산기 모달 ===== */
@@ -212,6 +291,40 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .gm-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:3000; align-items:center; justify-content:center; cursor:zoom-out; padding:20px; }
         .gm-lightbox img { max-width:95%; max-height:95%; border-radius:8px; }
         @media (max-width:680px) { .gm-body { flex-direction:column; } .gm-list { border-right:none; border-bottom:1px solid #eee; } }
+
+        /* ===== 코믹월드 335 부스 가이드 ===== */
+        .cw-header { background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1); }
+        .cw-box { width:min(940px,100%); }
+        .cw-meta { display:flex; flex-wrap:wrap; gap:6px; padding:11px 14px; background:#f6f3ff; border-bottom:1px solid #eee; }
+        .cw-chip { background:#fff; border:1px solid #e3dcff; color:#5b46c9; border-radius:999px; padding:4px 10px; font-size:0.78rem; font-weight:700; }
+        .cw-chip b { color:#e0348b; }
+        .cw-chip.link { cursor:zoom-in; border-color:#ffc9e6; color:#d81b7a; }
+        .cw-cat { font-weight:800; color:#6a5cff; margin:12px 4px 8px; font-size:0.92rem; }
+        .cw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px; }
+        .cw-card { border:1px solid #eee; border-radius:10px; padding:6px 4px 7px; text-align:center; cursor:pointer; background:#fff; transition:.15s; }
+        .cw-card:hover { border-color:#c07bff; transform:translateY(-2px); }
+        .cw-card.picked { border-color:#6a5cff; background:#f4f1ff; box-shadow:0 0 0 2px #ded5ff inset; }
+        .cw-card img { width:100%; height:106px; object-fit:contain; }
+        .cw-card .nm { font-size:0.72rem; font-weight:600; margin-top:3px; word-break:keep-all; line-height:1.25; }
+        .cw-card .qty { display:inline-block; margin-top:3px; font-size:0.7rem; font-weight:800; color:#6a5cff; }
+        .cw-row { display:flex; align-items:center; gap:10px; border:1px solid #eee; border-radius:10px; padding:8px; margin-bottom:8px; }
+        .cw-row img { width:76px; height:56px; object-fit:contain; cursor:zoom-in; flex-shrink:0; }
+        .cw-row .nm { font-size:0.86rem; font-weight:700; }
+        .cw-row .sz { font-size:0.72rem; color:#999; }
+        .cw-mission { display:flex; gap:9px; align-items:flex-start; padding:8px 9px; border:1px solid #eee; border-radius:10px; margin-bottom:7px; cursor:pointer; }
+        .cw-mission.on { border-color:#ff8ad1; background:#fff4fa; }
+        .cw-mission input { margin-top:3px; accent-color:#e0348b; }
+        .cw-mission .ml { font-size:0.82rem; font-weight:700; word-break:keep-all; }
+        .cw-mission .md { font-size:0.72rem; color:#999; margin-top:2px; word-break:keep-all; }
+        .cw-prize { display:flex; align-items:center; gap:9px; padding:7px; border-radius:9px; background:#f7f7f7; margin-top:7px; }
+        .cw-prize.on { background:#fff0f7; }
+        .cw-prize img { width:56px; height:40px; object-fit:contain; cursor:zoom-in; }
+        .cw-prize .pn { flex:1; font-size:0.78rem; word-break:keep-all; }
+        .cw-prize .pc { font-weight:800; color:#e0348b; font-size:0.86rem; }
+        .cw-warn { margin-top:8px; font-size:0.75rem; color:#e0348b; font-weight:700; text-align:right; }
+        .cw-rules { margin-top:12px; font-size:0.73rem; color:#8a8a8a; line-height:1.55; }
+        .cw-rules li { margin-bottom:3px; }
+        .cw-src { margin-top:9px; font-size:0.7rem; color:#bbb; }
     """
 
     # 모달 HTML
@@ -229,6 +342,29 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         <div class="gm-cart-items" id="gm-cart-items"></div>
         <div class="gm-total" id="gm-total"></div>
         <div id="gm-bonus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="cw-modal" class="gm-overlay" onclick="if(event.target===this)closeCwModal()">
+  <div class="gm-box cw-box">
+    <div class="gm-header cw-header">
+      <span>🎪 코믹월드 335 · 아워 노트 부스 가이드</span>
+      <button class="gm-close" onclick="closeCwModal()">✕</button>
+    </div>
+    <div class="cw-meta" id="cw-meta"></div>
+    <div class="gm-body">
+      <div class="gm-list" id="cw-list"></div>
+      <div class="gm-cart">
+        <h3>🧾 구매 목록</h3>
+        <div class="gm-cart-items" id="cw-cart-items"></div>
+        <div class="gm-total" id="cw-total"></div>
+        <div id="cw-warn"></div>
+        <h3 style="margin-top:16px;">🎁 현장 이벤트 (해당 항목 체크)</h3>
+        <div id="cw-missions"></div>
+        <div id="cw-prizes"></div>
+        <ol class="cw-rules" id="cw-rules"></ol>
+        <div class="cw-src">※ 이미지·정보 출처: 공식 X @bangdreamon_KR (2026-08-07 참가 정보 공개). 실제 굿즈 디자인·색상은 실물과 다를 수 있습니다.</div>
       </div>
     </div>
   </div>
@@ -330,6 +466,126 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         document.getElementById('gm-lightbox').style.display = 'flex';
     }
     """
+    # ---- 코믹월드 335 부스 가이드 JS ----
+    goods_js += """
+    const CW = __CW_DATA__;
+    let cwCart = {}, cwMission = {};
+
+    function openCwModal() { buildCwModal(); renderCw(); document.getElementById('cw-modal').style.display='flex'; }
+    function closeCwModal() { document.getElementById('cw-modal').style.display='none'; }
+
+    function buildCwModal() {
+        const meta = document.getElementById('cw-meta');
+        if (meta.dataset.built) return;
+        const i = CW.info;
+        meta.innerHTML = `<span class="cw-chip">📍 ${i.place} <b>${i.booth}</b></span>
+            <span class="cw-chip">📅 ${i.date}</span>
+            <span class="cw-chip">🛍️ 품목별 최대 ${i.limit}개</span>
+            <span class="cw-chip link" onclick="showLightbox('${i.event_img}')">🖼️ 이벤트 공지 원본</span>
+            <span class="cw-chip link" onclick="showLightbox('${i.sale_img}')">🖼️ 판매 공지 원본</span>`;
+
+        const cats = {};
+        CW.goods.forEach(g => { (cats[g.cat] = cats[g.cat] || []).push(g); });
+        let html = '';
+        for (const c in cats) {
+            const isChar = c.indexOf('캐릭터') === 0;
+            html += `<div class="cw-cat">${c}</div>`;
+            if (isChar) {
+                html += '<div class="cw-grid">';
+                cats[c].forEach(g => {
+                    html += `<div class="cw-card" id="cwc-${g.id}" onclick="cwAdd('${g.id}')" title="클릭: 담기 / 이미지 우측 상단 🔍: 원본 보기">
+                        <img src="${g.thumb}" alt="${g.name}">
+                        <div class="nm">${g.name}</div>
+                        <div class="qty" id="cwq-${g.id}"></div>
+                    </div>`;
+                });
+                html += '</div>';
+            } else {
+                cats[c].forEach(g => {
+                    html += `<div class="cw-row">
+                        <img src="${g.thumb}" onclick="showLightbox('${g.full}')" alt="${g.name}">
+                        <div style="flex:1;cursor:pointer;" onclick="cwAdd('${g.id}')">
+                            <div class="nm">${g.name}</div>
+                            <div class="sz">${g.size} · ${g.price.toLocaleString()}원</div>
+                        </div>
+                        <button class="gm-add" style="background:#6a5cff;" onclick="cwAdd('${g.id}')">담기</button>
+                    </div>`;
+                });
+            }
+        }
+        document.getElementById('cw-list').innerHTML = html;
+
+        document.getElementById('cw-missions').innerHTML = CW.missions.map(m =>
+            `<label class="cw-mission" id="cwm-${m.id}">
+                <input type="checkbox" onchange="cwToggle('${m.id}', this.checked)">
+                <span><span class="ml">${m.label}</span><span class="md">${m.desc}</span></span>
+            </label>`).join('');
+
+        document.getElementById('cw-rules').innerHTML =
+            CW.info.rules.map(r => `<li>${r}</li>`).join('');
+        meta.dataset.built = '1';
+    }
+
+    function cwAdd(id) {
+        const lim = CW.info.limit;
+        cwCart[id] = Math.min((cwCart[id] || 0) + 1, lim);
+        renderCw();
+    }
+    function cwQty(id, d) { cwCart[id] = (cwCart[id] || 0) + d; if (cwCart[id] <= 0) delete cwCart[id]; renderCw(); }
+    function cwToggle(id, on) { cwMission[id] = on; document.getElementById('cwm-'+id).classList.toggle('on', on); renderCw(); }
+
+    function renderCw() {
+        const ids = Object.keys(cwCart);
+        const find = id => CW.goods.find(g => g.id === id);
+
+        // 카드 선택 상태 갱신
+        CW.goods.forEach(g => {
+            const card = document.getElementById('cwc-' + g.id);
+            if (!card) return;
+            const q = cwCart[g.id] || 0;
+            card.classList.toggle('picked', q > 0);
+            document.getElementById('cwq-' + g.id).textContent = q ? '× ' + q : '';
+        });
+
+        const box = document.getElementById('cw-cart-items');
+        if (ids.length === 0) {
+            box.innerHTML = '<div class="gm-empty">왼쪽에서 굿즈를 담아보세요<br>(캐릭터 카드는 클릭하면 담깁니다)</div>';
+        } else {
+            box.innerHTML = ids.map(id => {
+                const g = find(id), q = cwCart[id];
+                return `<div class="gm-cart-row">
+                    <span class="gm-cart-name">${g.name}</span>
+                    <span class="gm-qtybox">
+                        <button onclick="cwQty('${id}',-1)">−</button><b>${q}</b><button onclick="cwQty('${id}',1)">＋</button>
+                    </span>
+                    <span class="gm-cart-sub">${(g.price*q).toLocaleString()}원</span>
+                </div>`;
+            }).join('');
+        }
+        const total = ids.reduce((s, id) => s + find(id).price * cwCart[id], 0);
+        const count = ids.reduce((s, id) => s + cwCart[id], 0);
+        document.getElementById('cw-total').innerHTML =
+            `${count}점 · 합계 <b>${total.toLocaleString()}원</b>`;
+        const maxed = ids.filter(id => cwCart[id] >= CW.info.limit).length;
+        document.getElementById('cw-warn').innerHTML = maxed
+            ? `<div class="cw-warn">⚠️ ${maxed}개 품목이 1회 대기 한도(품목별 ${CW.info.limit}개)에 도달했습니다 — 더 사려면 재줄서기 필요</div>` : '';
+
+        // 현장 이벤트 → 받을 수 있는 증정 굿즈 집계
+        const got = {};
+        CW.missions.forEach(m => {
+            if (!cwMission[m.id]) return;
+            m.gives.forEach(([p, n]) => { got[p] = (got[p] || 0) + n; });
+        });
+        document.getElementById('cw-prizes').innerHTML = Object.keys(CW.prizes).map(k => {
+            const p = CW.prizes[k], n = got[k] || 0;
+            return `<div class="cw-prize ${n?'on':''}">
+                <img src="${p.thumb}" onclick="showLightbox('${CW.info.event_img}')" alt="${p.name}">
+                <span class="pn">${p.name}</span><span class="pc">${n}개</span>
+            </div>`;
+        }).join('');
+    }
+    """
+    goods_js = goods_js.replace('__CW_DATA__', cw_json)
     goods_js = goods_js.replace('__CAFE_GOODS__', cafe_goods_json)
     goods_js = goods_js.replace('__CAFE_BONUS__', cafe_bonus_json)
 
@@ -743,9 +999,12 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         let goodsBtnHtml = evt.has_goods
             ? `<button onclick="openGoodsModal()" class="btn-super-main" style="background:linear-gradient(135deg,#7b4fff,#a17bff); margin-top:auto;">🛒 굿즈 · 메뉴 계산기 열기</button>`
             : '';
+        if (evt.has_cw) {{
+            goodsBtnHtml = `<button onclick="openCwModal()" class="btn-super-main" style="background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1); margin-top:auto;">🎪 부스 굿즈 · 현장 이벤트 가이드 (ZA02)</button>`;
+        }}
         let mainLinkHtml = (evt.main_links || []).map((m, i) => {{
             const label = m.label ? `👉 ${{m.label}} 정보 확인하기` : '👉 통합 정보 확인하기';
-            const mt = (evt.has_goods || i > 0) ? 'margin-top:10px;' : '';
+            const mt = (evt.has_goods || evt.has_cw || i > 0) ? 'margin-top:10px;' : '';
             return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main" style="${{mt}}">${{label}}</a>`;
         }}).join('');
         let ticketHtml = (evt.ticket_links || []).map(m => {{
