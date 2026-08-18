@@ -197,3 +197,11 @@
       'moment / memory' → 'moment·memory'로 치환. 비고에 쓸 땐 항목 구분 외 슬래시 금지.
     · 검증: selenium headless로 로컬 index.html 스크린샷 찍어 육안 확인(scratchpad shot.py).
       ★앞으로 UI 변경은 반드시 스크린샷으로 확인하고 푸시할 것(HTML grep만으로는 레이아웃 깨짐을 못 잡음).
+
+  - 2026-08-18 (8차) 토모리 생일카페 장소 확정.
+    · @TOMORIDAY_2026 프로필(fxtwitter API로 확인): 2026.11.21~11.22, 카페 셉트(서울 마포구 양화로11길 41 1층).
+      events.csv 해당 행 장소 '홍대 인근' → '카페 셉트(주소)' 갱신 + 비고 추가. 빌드/커밋/푸시 완료(aaebb7b).
+    · 메뉴·특전·예약 등 트윗 본문은 syndication 타임라인이 계속 HTTP 429(레이트리밋)라 미확보. 재시도 대기 중.
+      ★검색엔진(WebSearch)에는 이런 소규모 생카 계정이 인덱싱 안 되니, 계정명 알면 곧장 fxtwitter API로 확인할 것.
+    · 알려진 부작용(기존): 해외오프이벤/scraper.py 가 Windows cp949 콘솔에서 UnicodeEncodeError로 죽음
+      (update_and_push.sh 는 non-fatal 처리라 빌드는 진행됨). PYTHONIOENCODING=utf-8 필요.
