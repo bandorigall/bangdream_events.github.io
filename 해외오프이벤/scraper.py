@@ -13,6 +13,14 @@ manual_overseas.csv 가 있으면 병합하며, 같은 URL이면 수동 데이�
 stdlib만 사용. 네트워크 실패 시 기존 CSV를 덮어쓰지 않고 그대로 둔다.
 """
 
+# Windows 콘솔(cp949)에서 일본어·기호 print 시 UnicodeEncodeError로 죽는 것을 방지
+import sys
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 import re
 import os
 import html as html_mod

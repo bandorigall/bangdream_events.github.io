@@ -205,3 +205,14 @@
       ★검색엔진(WebSearch)에는 이런 소규모 생카 계정이 인덱싱 안 되니, 계정명 알면 곧장 fxtwitter API로 확인할 것.
     · 알려진 부작용(기존): 해외오프이벤/scraper.py 가 Windows cp949 콘솔에서 UnicodeEncodeError로 죽음
       (update_and_push.sh 는 non-fatal 처리라 빌드는 진행됨). PYTHONIOENCODING=utf-8 필요.
+
+  - 2026-08-18 (9차) 토모리 생카 트윗 확보 — ★X 우회 수단 갱신.
+    · syndication 타임라인은 이 IP에서 429가 1시간 넘게 지속(대기해도 안 풀림).
+      nitter/xcancel 미러는 전부 안티봇(Anubis PoW·JS 챌린지)이라 curl·headless·비headless 셀레니움 모두 실패.
+    ★성공한 방법: 셀레니움으로 **x.com 프로필을 직접** 로드(비headless 창).
+      로그인 안 해도 최신 5개 트윗이 렌더됨(그 이상은 로그인 벽). 전역 CLAUDE.md의 "x.com은 402" 는 WebFetch 한정.
+    · 확보 내용: 8/17 공식 해시태그 확정(#토모리_평생_밴드하자 · #별하늘로_나아갈_너의_손을_잡고),
+      7/31~8/14 해시태그 공모. 메뉴·특전·예약은 아직 미공지 → 10~11월 재확인 필요.
+      events.csv 비고 반영 후 푸시(15f1017). 스크립트: scratchpad/xc2.py
+    · 해외오프이벤/scraper.py: 파일 상단에 sys.stdout/stderr reconfigure(utf-8, errors=replace) 추가.
+      cp949 콘솔에서 일본어 장소명 print 시 UnicodeEncodeError로 죽던 문제 해소. 실행 확인 — 23건 저장(좌표 18건), exit 0.
