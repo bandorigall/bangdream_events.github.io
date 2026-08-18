@@ -768,6 +768,8 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .note-text {{ font-size: 0.9rem; background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 15px; }}
 
         /* 비고를 【머리말】 단위로 쪼개 카드로 표시 (양일 행사 토/일 구분용) */
+        /* .info-area 가 flex column 이라 flex:none 이 없으면 카드가 찌부러진다 */
+        .note-text, .note-sec {{ flex: 0 0 auto; }}
         .note-sec {{ margin-bottom: 10px; border-radius: 10px; overflow: hidden; border: 1px solid #ffe08a; background: #fffdf5; }}
         .note-sec > h4 {{
             margin: 0; padding: 7px 12px; font-size: 0.86rem; font-weight: 700;
@@ -795,7 +797,14 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             border-radius: 12px; margin-top: auto; 
             text-decoration: none; box-shadow: 0 4px 10px rgba(233, 30, 99, 0.2);
             transition: 0.2s;
+            flex: 0 0 auto;
         }}
+        .btn-super-main.btn-mini {{
+            font-size: 0.85rem; font-weight: 600; padding: 9px 12px; border-radius: 9px;
+            text-align: left; box-shadow: none;
+            background: #fff; color: #d81b60; border: 1.5px solid #ffc1d9;
+        }}
+        .btn-super-main.btn-mini:hover {{ background: #fff2f7; }}
         .btn-super-main:hover {{ transform: translateY(-2px); box-shadow: 0 6px 15px rgba(233, 30, 99, 0.3); }}
         .btn-ticket {{ background: linear-gradient(135deg, #00cd3c, #21d35d); box-shadow: 0 4px 10px rgba(0, 205, 60, 0.25); }}
         .btn-ticket:hover {{ box-shadow: 0 6px 15px rgba(0, 205, 60, 0.35); }}
@@ -1060,10 +1069,13 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         if (evt.has_cw) {{
             goodsBtnHtml = `<button onclick="openCwModal()" class="btn-super-main" style="background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1); margin-top:auto;">🎪 부스 굿즈 · 현장 이벤트 가이드 (ZA02)</button>`;
         }}
+        // 링크가 많은 행사는 버튼을 작게(btn-mini) — 안 그러면 버튼 벽이 된다
+        const manyLinks = (evt.main_links || []).length > 3;
         let mainLinkHtml = (evt.main_links || []).map((m, i) => {{
-            const label = m.label ? `👉 ${{m.label}} 정보 확인하기` : '👉 통합 정보 확인하기';
-            const mt = (evt.has_goods || evt.has_cw || i > 0) ? 'margin-top:10px;' : '';
-            return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main" style="${{mt}}">${{label}}</a>`;
+            const label = m.label ? `👉 ${{m.label}}` : '👉 통합 정보 확인하기';
+            const mt = (evt.has_goods || evt.has_cw || i > 0) ? 'margin-top:8px;' : '';
+            const mini = manyLinks ? ' btn-mini' : '';
+            return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main${{mini}}" style="${{mt}}">${{label}}</a>`;
         }}).join('');
         let ticketHtml = (evt.ticket_links || []).map(m => {{
             const label = m.label ? `🎟️ ${{m.label}} 예매하러 가기` : '🎟️ 예매하러 가기';
