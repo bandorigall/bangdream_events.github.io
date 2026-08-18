@@ -766,7 +766,28 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .btn-kakao {{ background-color: #FEE500; color: #191919; }}
         
         .note-text {{ font-size: 0.9rem; background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 15px; }}
-        
+
+        /* 비고를 【머리말】 단위로 쪼개 카드로 표시 (양일 행사 토/일 구분용) */
+        .note-sec {{ margin-bottom: 10px; border-radius: 10px; overflow: hidden; border: 1px solid #ffe08a; background: #fffdf5; }}
+        .note-sec > h4 {{
+            margin: 0; padding: 7px 12px; font-size: 0.86rem; font-weight: 700;
+            background: #ffe9a8; color: #7a5b00; letter-spacing: -0.2px;
+        }}
+        .note-sec > ul {{ margin: 0; padding: 9px 12px 10px 28px; }}
+        .note-sec > ul > li {{ font-size: 0.84rem; line-height: 1.5; color: #5c4a1a; margin-bottom: 4px; }}
+        .note-sec > ul > li:last-child {{ margin-bottom: 0; }}
+        .note-sec > ul > li.is-caveat {{ list-style: none; margin-left: -16px; color: #8d7a4a; font-size: 0.78rem; }}
+        .note-sec .note-time {{ font-weight: 700; color: #d1477a; }}
+        .note-sec.is-sat {{ border-color: #b9d8ff; background: #f7fbff; }}
+        .note-sec.is-sat > h4 {{ background: #d6e9ff; color: #14508f; }}
+        .note-sec.is-sat > ul > li {{ color: #2b4a6b; }}
+        .note-sec.is-sun {{ border-color: #ffc2d8; background: #fff8fb; }}
+        .note-sec.is-sun > h4 {{ background: #ffd6e6; color: #a12057; }}
+        .note-sec.is-sun > ul > li {{ color: #6b2b46; }}
+        .note-sec.is-shop {{ border-color: #cfe8d5; background: #f7fcf8; }}
+        .note-sec.is-shop > h4 {{ background: #d9f0e0; color: #1d6b3a; }}
+        .note-sec.is-shop > ul > li {{ color: #2c5c3d; }}
+
         .btn-super-main {{
             display: block; width: 100%; box-sizing: border-box; text-align: center; 
             background: linear-gradient(135deg, #ff4081, #ff80ab); color: white;
@@ -939,6 +960,42 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         }});
     }}
 
+    // 비고가 "【머리말】 …" 형태면 머리말 단위 카드 + 항목 리스트로 쪼갠다.
+    // (양일 개최 행사의 토/일 구분용. 해당 포맷이 아니면 기존 한 덩어리 표시 유지)
+    function formatNote(note) {{
+        const chunks = note.split('◆◆').map(s => s.trim()).filter(Boolean);
+        const secs = [];
+        chunks.forEach(chunk => {{
+            const m = chunk.match(/^【(.+?)】\s*([\s\S]*)$/);
+            if (!m) return;
+            secs.push({{ head: m[1].trim(), body: m[2].trim() }});
+        }});
+        if (!secs.length) return `<div class="note-text">📢 ${{note}}</div>`;
+
+        return secs.map(sec => {{
+            let cls = '';
+            if (sec.head.includes('22')) cls = ' is-sat';
+            else if (sec.head.includes('23')) cls = ' is-sun';
+            else if (sec.head.includes('판매')) cls = ' is-shop';
+
+            const items = sec.body
+                .split(/\s\/\s/)
+                .map(s => s.trim().replace(/^[·\s]+|[·\s]+$/g, ''))
+                .filter(Boolean)
+                .map(s => {{
+                    const caveat = s.startsWith('※') ? ' is-caveat' : '';
+                    // 맨 앞의 시각 표기(12:30~, 10:00, ★15:00~ 등)를 강조
+                    const html = s.replace(
+                        /^(★?\s*\d{{1,2}}:\d{{2}}\s*~?)/,
+                        '<span class="note-time">$1</span>'
+                    );
+                    return `<li class="${{caveat.trim()}}">${{html}}</li>`;
+                }})
+                .join('');
+            return `<div class="note-sec${{cls}}"><h4>${{sec.head}}</h4><ul>${{items}}</ul></div>`;
+        }}).join('');
+    }}
+
     function selectEvent(id) {{
         const evt = events.find(e => e.id === id);
         if (!evt) return;
@@ -996,7 +1053,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         }});
         btnsHtml += '</div>';
 
-        let noteHtml = evt.note ? `<div class="note-text">📢 ${{evt.note}}</div>` : '';
+        let noteHtml = evt.note ? formatNote(evt.note) : '';
         let goodsBtnHtml = evt.has_goods
             ? `<button onclick="openGoodsModal()" class="btn-super-main" style="background:linear-gradient(135deg,#7b4fff,#a17bff); margin-top:auto;">🛒 굿즈 · 메뉴 계산기 열기</button>`
             : '';
