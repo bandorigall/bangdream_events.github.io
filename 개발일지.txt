@@ -216,3 +216,15 @@
       events.csv 비고 반영 후 푸시(15f1017). 스크립트: scratchpad/xc2.py
     · 해외오프이벤/scraper.py: 파일 상단에 sys.stdout/stderr reconfigure(utf-8, errors=replace) 추가.
       cp949 콘솔에서 일본어 장소명 print 시 UnicodeEncodeError로 죽던 문제 해소. 실행 확인 — 23건 저장(좌표 18건), exit 0.
+
+  - 2026-08-19 20:51 카드 게임 페스티벌 2026 · 무겐다이 뮤타입 물판 정보 반영.
+    ① 출처: 공식 X @BUSHIASIA_KR 2026-08-19 트윗(status/2090039967229907196) 이미지 2장.
+       (블로그 물판 글에는 뮤타입 굿즈가 없었음 → nitter.net RSS로 트윗 탐색 후
+        pbs.twimg.com ?name=orig 직다운 → assets/cgf2026/source/{goods.jpg, lottery.jpg})
+    ② assets/crop_cgf2026.py: GOODS LINEUP 4-4-3 격자에서 상품 이미지 영역만 크롭 → thumb/ 11장.
+    ③ make_page.py: has_cgf 플래그('카드 게임 페스티벌' in title) → 전용 모달 openCgModal().
+       좌측 굿즈 11품목(가격·사이즈·랜덤/종류별 태그), 우측 구매목록·합계 +
+       ★사인회 추첨 계산(3만원당 1회, 1회 구매당 최대 5회 도달 시 "결제 분할" 안내, 진행바).
+       CSS는 gm-* 재사용 + cg-* 추가. 공지 원본은 라이트박스.
+    ④ events.csv: 비고에 굿즈 11품목 가격/사이즈 + 추첨 규정 추가, 통합정보모음 맨 앞에 공식 X 링크.
+    ※ 미확정: 굿즈별 종류 수(트레이딩 랜덤 종수), 1인 구매 수량 제한 — 공지 없음.
