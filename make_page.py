@@ -132,7 +132,9 @@ def build_events_data(csv_filename):
             'has_goods': ('콜라보 카페' in title),
             # 코믹월드 335(아워 노트 ZA02 부스)에만 부스 가이드 버튼을 노출
             # (사설 부스 행은 공식 굿즈 데이터와 무관하므로 '아워 노트' 조건으로 배제)
-            'has_cw': ('코믹월드 335' in title and '아워 노트' in title)
+            'has_cw': ('코믹월드 335' in title and '아워 노트' in title),
+            # 카드 게임 페스티벌 2026 in KOREA — 무겐다이 뮤타입 물판/추첨 계산기
+            'has_cgf': ('카드 게임 페스티벌' in title)
         })
 
     return events_data
@@ -253,6 +255,47 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     cw_json = json.dumps({'goods': cw_goods, 'missions': cw_missions,
                           'prizes': cw_prizes, 'info': cw_info}, ensure_ascii=False)
 
+    # -----------------------------------------------------------
+    # 카드 게임 페스티벌 2026 in KOREA · 무겐다이 뮤타입 물판 데이터
+    # 출처: 공식 X(@BUSHIASIA_KR) 2026-08-19 굿즈 라인업/추첨 안내 이미지 2장
+    # 굿즈 3만원 구매당 퀴즈쇼&사인회 추첨권 1회(최대 5회) → 자동 계산
+    # -----------------------------------------------------------
+    GT = 'assets/cgf2026/thumb/'
+    GS = 'assets/cgf2026/source/'
+    cgf_goods = [
+        {'id': 'diorama',        'name': '디오라마 아크릴 스탠드',        'price': 50000, 'size': '약 W150×H190×D70mm', 'kind': '단품',   'thumb': GT+'diorama.jpg'},
+        {'id': 'pouch',          'name': '파우치',                      'price': 25000, 'size': '약 W140×H110mm',    'kind': '단품',   'thumb': GT+'pouch.jpg'},
+        {'id': 'acryl_stand',    'name': '아크릴 스탠드',                'price': 20000, 'size': '본체 약 W75×H150mm / 받침대 약 W60×H60mm', 'kind': '종류별', 'thumb': GT+'acryl_stand.jpg'},
+        {'id': 'acryl_keyring',  'name': 'SNS풍 아크릴 키체인',          'price': 12500, 'size': '약 W70×H100mm',     'kind': '종류별', 'thumb': GT+'acryl_keyring.jpg'},
+        {'id': 'clearfile',      'name': '클리어 파일',                  'price': 6000,  'size': '약 W210×H300mm',    'kind': '단품',   'thumb': GT+'clearfile.jpg'},
+        {'id': 'acryl_block',    'name': '트레이딩 아크릴 블록',          'price': 11000, 'size': '약 W70×H50×D8mm',   'kind': '랜덤',   'thumb': GT+'acryl_block.jpg'},
+        {'id': 'badge_big_holo', 'name': '트레이딩 빅 홀로그래픽 캔뱃지',  'price': 8500,  'size': '직경 약 W75mm',      'kind': '랜덤',   'thumb': GT+'badge_big_holo.jpg'},
+        {'id': 'badge_square',   'name': '트레이딩 사각 홀로그램 캔뱃지',  'price': 6000,  'size': '약 W70×H100mm',     'kind': '랜덤',   'thumb': GT+'badge_square.jpg'},
+        {'id': 'badge_trading',  'name': '트레이딩 캔뱃지 (통상·홀로 ver.)', 'price': 6000, 'size': '공지 표기 약 W150×H190×D70mm', 'kind': '랜덤', 'thumb': GT+'badge_trading.jpg'},
+        {'id': 'ticket_card',    'name': '트레이딩 티켓 스타일 카드',      'price': 6000,  'size': '약 W80×H210mm',     'kind': '랜덤',   'thumb': GT+'ticket_card.jpg'},
+        {'id': 'bromide',        'name': '트레이딩 브로마이드',           'price': 4500,  'size': '약 W140×H110mm',    'kind': '랜덤',   'thumb': GT+'bromide.jpg'},
+    ]
+    cgf_info = {
+        'place': '서울 양재 aT센터 제2전시장',
+        'date': '2026.08.22(토) ~ 08.23(일)',
+        'per_draw': 30000,      # 추첨권 1회 기준 금액
+        'max_draw': 5,          # 1회 구매당 최대 추첨 횟수
+        'draw_time': '8/23(일) 10:00 ~ 14:30 · 추첨 부스',
+        'show_time': '8/23(일) 15:00 ~ 16:30 · 스테이지',
+        'guests': '나카마치 아라레 · 센고쿠 유노',
+        'goods_img': GS + 'goods.jpg',
+        'lottery_img': GS + 'lottery.jpg',
+        'rules': [
+            '추첨은 <b>8/23(일)에만</b> 진행되며, 물판 코너에서 무겐다이 뮤타입 굿즈를 <b>3만원 구매할 때마다 추첨 1회</b>(1회 구매당 최대 5회)를 받습니다.',
+            '추첨 부스의 추첨기를 돌려 <b>해당 색(빨강·하늘·노랑·보라)</b>이 나오면 당첨 → 퀴즈쇼 &amp; 사인회 참가.',
+            '<b>구매 1건당 최대 1회만 당첨</b>되며 중복 당첨은 불가합니다. 추첨은 조기 종료될 수 있습니다.',
+            '당첨자 확인을 위해 이름·연락처 등 개인정보 수집 및 확인이 진행됩니다.',
+            '사인은 부시로드측이 준비한 포스트카드에만 가능하며, 퀴즈쇼 경품은 게스트 포스트카드입니다.',
+            '모든 이벤트 참가에는 당일 사용 가능한 행사 티켓이 필요합니다.',
+        ],
+    }
+    cgf_json = json.dumps({'goods': cgf_goods, 'info': cgf_info}, ensure_ascii=False)
+
     # 추가 CSS (일반 문자열 → 중괄호 그대로 사용)
     extra_css = """
         /* ===== 굿즈 계산기 모달 ===== */
@@ -292,6 +335,28 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .gm-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:3000; align-items:center; justify-content:center; cursor:zoom-out; padding:20px; }
         .gm-lightbox img { max-width:95%; max-height:95%; border-radius:8px; }
         @media (max-width:680px) { .gm-body { flex-direction:column; } .gm-list { border-right:none; border-bottom:1px solid #eee; } }
+
+        /* ===== 카드 게임 페스티벌 2026 · 무겐다이 뮤타입 물판 ===== */
+        .cg-header { background:linear-gradient(135deg,#38b6ff,#b39bff 55%,#ff7fc4); }
+        .cg-box { width:min(940px,100%); }
+        .cg-meta { display:flex; flex-wrap:wrap; gap:6px; padding:11px 14px; background:#f2f9ff; border-bottom:1px solid #eee; }
+        .cg-chip { background:#fff; border:1px solid #cfe7ff; color:#1b7fc4; border-radius:999px; padding:4px 10px; font-size:0.78rem; font-weight:700; }
+        .cg-chip b { color:#e0348b; }
+        .cg-chip.link { cursor:zoom-in; border-color:#ffc9e6; color:#d81b7a; }
+        .cg-row { display:flex; align-items:center; gap:10px; border:1px solid #eee; border-radius:10px; padding:8px; margin-bottom:8px; }
+        .cg-row img { width:84px; height:62px; object-fit:contain; cursor:zoom-in; flex-shrink:0; background:#fafafa; border-radius:6px; }
+        .cg-row .nm { font-size:0.86rem; font-weight:700; word-break:keep-all; }
+        .cg-row .sz { font-size:0.72rem; color:#999; margin-top:2px; }
+        .cg-tag { display:inline-block; margin-left:5px; padding:1px 6px; border-radius:999px; font-size:0.68rem; font-weight:700; background:#eef4ff; color:#5b6bd6; }
+        .cg-tag.rand { background:#fff0f7; color:#d81b7a; }
+        .cg-draw { margin-top:12px; padding:12px; border-radius:12px; background:linear-gradient(135deg,#f2f9ff,#ffeef7); border:1px solid #e2eefc; text-align:center; }
+        .cg-draw .big { font-size:1.6rem; font-weight:900; color:#e0348b; }
+        .cg-draw .sub { font-size:0.78rem; color:#777; margin-top:4px; word-break:keep-all; }
+        .cg-bar { height:8px; border-radius:999px; background:#e9e9ef; overflow:hidden; margin-top:9px; }
+        .cg-bar i { display:block; height:100%; background:linear-gradient(90deg,#38b6ff,#ff7fc4); }
+        .cg-rules { margin-top:12px; font-size:0.73rem; color:#8a8a8a; line-height:1.55; }
+        .cg-rules li { margin-bottom:3px; }
+        .cg-src { margin-top:9px; font-size:0.7rem; color:#bbb; }
 
         /* ===== 코믹월드 335 부스 가이드 ===== */
         .cw-header { background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1); }
@@ -366,6 +431,26 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         <div id="cw-prizes"></div>
         <ol class="cw-rules" id="cw-rules"></ol>
         <div class="cw-src">※ 이미지·정보 출처: 공식 X @bangdreamon_KR (2026-08-07 참가 정보 공개). 실제 굿즈 디자인·색상은 실물과 다를 수 있습니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="cg-modal" class="gm-overlay" onclick="if(event.target===this)closeCgModal()">
+  <div class="gm-box cg-box">
+    <div class="gm-header cg-header">
+      <span>🛸 무겐다이 뮤타입 물판 · 사인회 추첨 계산기</span>
+      <button class="gm-close" onclick="closeCgModal()">✕</button>
+    </div>
+    <div class="cg-meta" id="cg-meta"></div>
+    <div class="gm-body">
+      <div class="gm-list" id="cg-list"></div>
+      <div class="gm-cart">
+        <h3>🧾 구매 목록</h3>
+        <div class="gm-cart-items" id="cg-cart-items"></div>
+        <div class="gm-total" id="cg-total"></div>
+        <div id="cg-draw"></div>
+        <ol class="cg-rules" id="cg-rules"></ol>
+        <div class="cg-src">※ 이미지·정보 출처: 공식 X @BUSHIASIA_KR (2026-08-19 굿즈 라인업 · 추첨 이벤트 공지). 판매 수량·구매 제한은 별도 공지가 없어 반영되지 않았습니다.</div>
       </div>
     </div>
   </div>
@@ -586,7 +671,92 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         }).join('');
     }
     """
+
+    # ---- 카드 게임 페스티벌 2026 · 무겐다이 뮤타입 물판 JS ----
+    goods_js += """
+    const CG = __CG_DATA__;
+    let cgCart = {};
+
+    function openCgModal() { buildCgModal(); renderCg(); document.getElementById('cg-modal').style.display='flex'; }
+    function closeCgModal() { document.getElementById('cg-modal').style.display='none'; }
+
+    function buildCgModal() {
+        const meta = document.getElementById('cg-meta');
+        if (meta.dataset.built) return;
+        const i = CG.info;
+        meta.innerHTML = `<span class="cg-chip">📍 ${i.place}</span>
+            <span class="cg-chip">🎲 추첨 <b>${i.draw_time}</b></span>
+            <span class="cg-chip">🎤 퀴즈쇼&amp;사인회 ${i.show_time}</span>
+            <span class="cg-chip">👤 ${i.guests}</span>
+            <span class="cg-chip link" onclick="showLightbox('${i.goods_img}')">🖼️ 굿즈 공지 원본</span>
+            <span class="cg-chip link" onclick="showLightbox('${i.lottery_img}')">🖼️ 추첨 공지 원본</span>`;
+
+        document.getElementById('cg-list').innerHTML = CG.goods.map(g => {
+            const tag = g.kind === '랜덤' ? '<span class="cg-tag rand">랜덤</span>'
+                      : (g.kind === '종류별' ? '<span class="cg-tag">종류별</span>' : '');
+            return `<div class="cg-row">
+                <img src="${g.thumb}" onclick="showLightbox('${CG.info.goods_img}')" alt="${g.name}">
+                <div style="flex:1;cursor:pointer;" onclick="cgAdd('${g.id}')">
+                    <div class="nm">${g.name}${tag}</div>
+                    <div class="sz">${g.size} · ${g.price.toLocaleString()}원</div>
+                </div>
+                <button class="gm-add" style="background:#38b6ff;" onclick="cgAdd('${g.id}')">담기</button>
+            </div>`;
+        }).join('');
+
+        document.getElementById('cg-rules').innerHTML =
+            CG.info.rules.map(r => `<li>${r}</li>`).join('');
+        meta.dataset.built = '1';
+    }
+
+    function cgAdd(id) { cgCart[id] = (cgCart[id] || 0) + 1; renderCg(); }
+    function cgQty(id, d) { cgCart[id] = (cgCart[id] || 0) + d; if (cgCart[id] <= 0) delete cgCart[id]; renderCg(); }
+
+    function renderCg() {
+        const ids = Object.keys(cgCart);
+        const find = id => CG.goods.find(g => g.id === id);
+        const box = document.getElementById('cg-cart-items');
+        if (ids.length === 0) {
+            box.innerHTML = '<div class="gm-empty">왼쪽에서 굿즈를 담아보세요<br>3만원마다 사인회 추첨권 1회!</div>';
+        } else {
+            box.innerHTML = ids.map(id => {
+                const g = find(id), q = cgCart[id];
+                return `<div class="gm-cart-row">
+                    <span class="gm-cart-name">${g.name}</span>
+                    <span class="gm-qtybox">
+                        <button onclick="cgQty('${id}',-1)">−</button><b>${q}</b><button onclick="cgQty('${id}',1)">＋</button>
+                    </span>
+                    <span class="gm-cart-sub">${(g.price*q).toLocaleString()}원</span>
+                </div>`;
+            }).join('');
+        }
+        const total = ids.reduce((s, id) => s + find(id).price * cgCart[id], 0);
+        const count = ids.reduce((s, id) => s + cgCart[id], 0);
+        document.getElementById('cg-total').innerHTML =
+            `${count}점 · 합계 <b>${total.toLocaleString()}원</b>`;
+
+        const per = CG.info.per_draw, max = CG.info.max_draw;
+        const raw = Math.floor(total / per);
+        const draws = Math.min(raw, max);
+        const rest = total % per;
+        let sub;
+        if (raw >= max) {
+            sub = `1회 구매 기준 최대 ${max}회에 도달했습니다. 더 받으려면 <b>결제를 나눠서</b> 진행해야 합니다.`;
+        } else if (total === 0) {
+            sub = `${per.toLocaleString()}원 구매마다 추첨 1회 (1회 구매당 최대 ${max}회)`;
+        } else {
+            sub = `다음 추첨권까지 <b>${(per - rest).toLocaleString()}원</b> 남았습니다.`;
+        }
+        const pct = raw >= max ? 100 : Math.round(rest / per * 100);
+        document.getElementById('cg-draw').innerHTML = `<div class="cg-draw">
+            🎲 예상 추첨 횟수 <span class="big">${draws}회</span>
+            <div class="cg-bar"><i style="width:${pct}%"></i></div>
+            <div class="sub">${sub}</div>
+        </div>`;
+    }
+    """
     goods_js = goods_js.replace('__CW_DATA__', cw_json)
+    goods_js = goods_js.replace('__CG_DATA__', cgf_json)
     goods_js = goods_js.replace('__CAFE_GOODS__', cafe_goods_json)
     goods_js = goods_js.replace('__CAFE_BONUS__', cafe_bonus_json)
 
@@ -1066,6 +1236,9 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         let goodsBtnHtml = evt.has_goods
             ? `<button onclick="openGoodsModal()" class="btn-super-main" style="background:linear-gradient(135deg,#7b4fff,#a17bff); margin-top:auto;">🛒 굿즈 · 메뉴 계산기 열기</button>`
             : '';
+        if (evt.has_cgf) {{
+            goodsBtnHtml = `<button onclick="openCgModal()" class="btn-super-main" style="background:linear-gradient(135deg,#38b6ff,#b39bff 55%,#ff7fc4); margin-top:auto;">🛸 무겐다이 뮤타입 물판 · 사인회 추첨 계산기</button>`;
+        }}
         if (evt.has_cw) {{
             goodsBtnHtml = `<button onclick="openCwModal()" class="btn-super-main" style="background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1); margin-top:auto;">🎪 부스 굿즈 · 현장 이벤트 가이드 (ZA02)</button>`;
         }}
@@ -1073,7 +1246,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         const manyLinks = (evt.main_links || []).length > 3;
         let mainLinkHtml = (evt.main_links || []).map((m, i) => {{
             const label = m.label ? `👉 ${{m.label}}` : '👉 통합 정보 확인하기';
-            const mt = (evt.has_goods || evt.has_cw || i > 0) ? 'margin-top:8px;' : '';
+            const mt = (evt.has_goods || evt.has_cw || evt.has_cgf || i > 0) ? 'margin-top:8px;' : '';
             const mini = manyLinks ? ' btn-mini' : '';
             return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main${{mini}}" style="${{mt}}">${{label}}</a>`;
         }}).join('');
