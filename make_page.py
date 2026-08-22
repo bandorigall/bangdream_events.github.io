@@ -12,7 +12,7 @@ def build_events_data(csv_filename):
 
     raw_rows = []
     try:
-        with open(csv_filename, newline='', encoding='utf-8') as csvfile:
+        with open(csv_filename, newline='', encoding='utf-8-sig') as csvfile:  # -sig: BOM이 붙어도 첫 헤더('이벤트명')가 깨지지 않게
             reader = csv.DictReader(csvfile)
             for row in reader:
                 raw_rows.append(row)
