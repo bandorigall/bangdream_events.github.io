@@ -54,7 +54,10 @@ NEWS_INCLUDE = ["コラボ", "カフェ", "cafe", "キャンペーン", "フェ�
                 "催事", "出展", "ブース"]
 # 아래 키워드가 있으면 오프라인 이벤트가 아님(세트리스트/배포/방송/음원 등) → 제외
 NEWS_EXCLUDE = ["セットリスト", "プレイリスト", "配信", "放送", "Blu-ray", "リリース",
-                "ラジオ", "デジタル", "同時購入", "見放題", "第", "放送のお知らせ"]
+                "ラジオ", "デジタル", "同時購入", "見放題", "第", "放送のお知らせ",
+                # 온라인 전용 캠페인(사전예약/스트리밍) — 오프라인 행사가 아니다
+                "事前予約", "Pre-add", "Pre-save", "Apple Music", "Spotify",
+                "予約キャンペーン", "オンラインくじ", "通販"]
 
 CSV_HEADER = ["이벤트명", "시작기간", "종료기간", "장소", "좌표", "통합정보모음", "비고", "예매처"]
 
@@ -494,7 +497,7 @@ def attach_summaries(dedup):
         print(f"[+] Gemini 요약 대상 {len(todo)}건 → 상세페이지 수집 후 1회 호출")
         items = []
         for i, e in enumerate(todo):
-            excerpt = _detail_excerpt(base_url(e["url"]))
+            excerpt = e.get("excerpt") or _detail_excerpt(base_url(e["url"]))
             items.append((i, e.get("title", ""), e.get("place", ""),
                           f"{e.get('start','')}~{e.get('end','')}", excerpt))
             time.sleep(0.3)                            # 상세페이지에 대한 예의
@@ -513,6 +516,386 @@ def attach_summaries(dedup):
         s = cache.get(e.get("title", ""), "")
         if s:
             e["note"] = f"{e['note']} · {s}" if e.get("note") else s
+
+
+# ----------------------------------------------------------------------------
+# 공식 X(트위터) 타임라인 수집  [2026-08-22 추가]
+#   bang-dream.com/events 에 카드가 올라오기 전에 X로 먼저 공지되는 라이브·콜라보를 보강한다.
+#   방법: syndication.twitter.com 프로필 타임라인 → __NEXT_DATA__ JSON 의 full_text.
+#         (WebFetch/x.com 직접 요청은 402, nitter 계열은 2026-08 기준 전부 사망)
+#   ※ 여기서 나온 행은 항상 '보조'다. 공식 사이트 행과 겹치면 무조건 사이트 쪽을 남긴다.
+# ----------------------------------------------------------------------------
+X_ACCOUNTS = ["bang_dream_info", "bang_dream_gbp", "bang_dream_mygo", "BDP_yumemita"]
+X_TIMELINE = "https://syndication.twitter.com/srv/timeline-profile/screen-name/{}"
+X_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+
+# --- 요청 예산 -----------------------------------------------------------
+#  syndication 은 로그인 없는 위젯 엔드포인트라 IP당 쿼터가 매우 빡빡하다.
+#  실측(2026-08-22): 2시간에 37건 → 429, 게다가 존재하지 않는 계정 조회도 똑같이 깎인다.
+#  그래서 '실행 사이'에도 유지되는 예산을 상태파일에 기록해두고 통제한다.
+X_STATE_PATH = os.path.join(HERE, "x_state.json")   # 요청 이력·쿨다운(커밋해도 무해)
+X_GAP_SEC = 45          # 요청 사이 최소 간격
+X_MAX_PER_HOUR = 6      # 최근 1시간 최대 요청 수
+X_MAX_PER_DAY = 24      # 최근 24시간 최대 요청 수
+X_COOLDOWN_SEC = 3 * 3600   # 429를 맞으면 이만큼은 X 수집 자체를 건너뛴다
+X_ACCOUNT_TTL = 6 * 3600    # 같은 계정을 이 시간 안에 또 받지는 않는다
+
+# 오프라인 행사로 볼 신호(하나 이상 필요)
+X_INCLUDE = ["ライブ", "LIVE", "イベント", "カフェ", "コラボ", "展", "ポップアップ",
+             "POP UP", "出展", "ブース", "フェス", "会場", "開催決定", "物販", "上映"]
+# 이게 있으면 오프라인 행사 공지로 확정(아래 X_EXCLUDE보다 우선).
+#   방송/배신 이야기를 곁들인 라이브 공지가 많아서, 제외어 단독 판정은 위험하다.
+X_STRONG = ["会場：", "会場:", "開催決定", "ライブ情報", "イベント情報", "公演情報",
+            "開催情報", "コラボカフェ", "ポップアップ", "POP UP STORE", "出展",
+            "ブース", "原画展", "展示会", "上映会", "フリーライブ", "リリースイベント",
+            "お渡し会", "握手会", "サイン会", "先行受付", "チケット"]
+# 강한 신호가 없을 때만 적용하는 제외어(음원/방송/굿즈발매 등)
+X_EXCLUDE = ["配信", "放送", "リリース", "発売", "動画公開", "試聴",
+             "セットリスト", "ラジオ", "楽曲", "プレゼントキャンペーン", "抽選結果"]
+# 어떤 경우에도 버리는 '끝난 행사 회고' 신호
+X_HARD_EXCLUDE = ["ありがとうございました", "アーカイブ配信", "終了しました",
+                  "受付終了", "販売終了", "本日をもって"]
+# 날짜만 있고 장소가 없어도 받아들일 '공지형' 머리말
+X_ANNOUNCE = ["【ライブ情報】", "【イベント情報】", "【公演情報】", "【開催情報】",
+              "開催決定", "開催が決定"]
+
+
+class _XRateLimited(Exception):
+    """429를 만나 이번 실행의 X 수집을 접는다."""
+
+
+def _x_state_load():
+    try:
+        with open(X_STATE_PATH, encoding="utf-8") as f:
+            st = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        st = {}
+    st.setdefault("requests", [])      # 요청 시각(epoch) 목록
+    st.setdefault("accounts", {})      # 계정별 마지막 성공 시각
+    st.setdefault("cooldown_until", 0)
+    return st
+
+
+def _x_state_save(st):
+    cut = time.time() - 24 * 3600
+    st["requests"] = [t for t in st["requests"] if t > cut]
+    try:
+        with open(X_STATE_PATH, "w", encoding="utf-8") as f:
+            json.dump(st, f, ensure_ascii=False, indent=2)
+    except OSError as ex:                              # noqa: BLE001
+        print(f"[i] x_state.json 저장 실패(무시): {ex}")
+
+
+def _x_budget_left(st):
+    """지금 요청을 몇 건 더 보낼 수 있는지. (시간당·일일 한도 중 작은 쪽)"""
+    now = time.time()
+    hour = sum(1 for t in st["requests"] if t > now - 3600)
+    day = sum(1 for t in st["requests"] if t > now - 24 * 3600)
+    return max(0, min(X_MAX_PER_HOUR - hour, X_MAX_PER_DAY - day))
+
+
+def _x_fetch_timeline(account):
+    """계정 타임라인 → [{id, text, created(date), urls[]}]. 실패 시 []."""
+    from datetime import datetime
+    st = _x_state_load()
+    st["requests"].append(time.time())
+    _x_state_save(st)
+    try:
+        req = Request(X_TIMELINE.format(account), headers={"User-Agent": X_UA})
+        with urlopen(req, timeout=30) as r:
+            html = r.read().decode("utf-8", "replace")
+    except Exception as ex:                            # noqa: BLE001
+        # ★429에 재시도 금지. 재시도는 쿼터만 더 태운다(실측). 쿨다운 걸고 물러난다.
+        if "429" in str(ex):
+            st = _x_state_load()
+            st["cooldown_until"] = time.time() + X_COOLDOWN_SEC
+            _x_state_save(st)
+            print(f"    [x] {account} 429 → X 수집 {X_COOLDOWN_SEC // 3600}시간 쉼")
+            raise _XRateLimited()
+        print(f"    [x] {account} 타임라인 실패: {ex}")
+        return []
+    m = re.search(r'id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
+    if not m:
+        print(f"    [x] {account}: 타임라인 위젯 차단(트윗 0건)")
+        return []
+    try:
+        data = json.loads(m.group(1))
+    except json.JSONDecodeError:
+        return []
+
+    found = {}
+
+    def walk(o):
+        if isinstance(o, dict):
+            if "full_text" in o and "id_str" in o and "created_at" in o:
+                urls = []
+                for u in (o.get("entities") or {}).get("urls") or []:
+                    if u.get("expanded_url"):
+                        urls.append(u["expanded_url"])
+                found[o["id_str"]] = {
+                    "id": o["id_str"],
+                    "text": html_mod.unescape(o["full_text"]),
+                    "created_at": o["created_at"],
+                    "urls": urls,
+                }
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+
+    walk(data)
+    out = []
+    for t in found.values():
+        try:
+            t["created"] = datetime.strptime(
+                t["created_at"], "%a %b %d %H:%M:%S %z %Y").date()
+        except (ValueError, TypeError):
+            continue
+        out.append(t)
+    out.sort(key=lambda t: t["created"], reverse=True)
+    st = _x_state_load()
+    st["accounts"][account] = time.time()
+    _x_state_save(st)
+    print(f"    [x] {account}: {len(out)}건")
+    return out
+
+
+def _x_strip(text):
+    """RT 접두사·t.co 링크를 걷어낸 본문."""
+    text = re.sub(r"^RT @[A-Za-z0-9_]+:\s*", "", text)
+    text = re.sub(r"https?://t\.co/\S+", " ", text)
+    return text.strip()
+
+
+def _x_title(text):
+    """트윗에서 행사명 추출. 「」 안 > 【】 다음 줄 > 첫 줄."""
+    m = None
+    for cand in re.finditer(r"[「]([^」]{4,60})[」]", text):
+        tail = text[cand.end():cand.end() + 8]
+        if re.match(r"\s*(?:の)?(?:配信|放送|公開|リリース|発売|試聴|カバー)", tail):
+            continue                                   # 곡명/화 제목
+        m = cand
+        break
+    if m:
+        # 「」 앞의 밴드/공연 번호(MyGO 6th LIVE 등)까지 붙여 온전한 이름으로
+        head = text[:m.start()].strip().split("\n")[-1].strip()
+        head = re.sub(r"^[【\[].*?[】\]]\s*", "", head).strip()
+        head = re.sub(r"^\d{1,2}月\d{1,2}日.*?開催\s*", "", head).strip()
+        name = f"{head} 「{m.group(1)}」".strip() if head else f"「{m.group(1)}」"
+        return re.sub(r"\s+", " ", name)[:80]
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    for l in lines:
+        l = re.sub(r"(?:の)?開催(?:が)?決定(?:し(?:ま(?:した|す))?)?[。！!]?$", "", l).strip()
+        l2 = re.sub(r"^[【\[](.*?)[】\]]\s*", "", l).strip()
+        if len(l2) >= 6 and not re.match(r"^(日程|会場|期間|場所|詳細)", l2):
+            return l2[:70]
+    return ""
+
+
+def _x_place(text):
+    """会場: / 場所: 줄에서 장소만."""
+    m = re.search(r"(?:会場|場所|開催場所|開催地)\s*[：:]\s*([^\n]+)", text)
+    if m:
+        p = m.group(1).strip()
+        p = re.sub(r"\s*(?:ほか|他)$", "", p)
+        return p[:60]
+    return ""
+
+
+def _x_slash_dates(text):
+    """트윗에 흔한 '8/22(土)' 표기를 '8月22日'로 바꿔 기존 파서가 읽게 한다.
+    (버전·시각 표기를 건드리지 않도록 앞뒤에 숫자가 없고 1~12/1~31 범위일 때만)"""
+    def sub(m):
+        mm, dd = int(m.group(1)), int(m.group(2))
+        if 1 <= mm <= 12 and 1 <= dd <= 31:
+            return f"{mm}月{dd}日"
+        return m.group(0)
+    return re.sub(r"(?<![\d/:])(\d{1,2})/(\d{1,2})(?![\d/:])", sub, text)
+
+
+def _x_dates(text, created):
+    """연도 표기가 없는 트윗도 처리. 트윗 작성일 이후로 오는 첫 날짜 그룹을 채택.
+    반환 (start, end) 또는 (None, None)."""
+    from datetime import timedelta
+    text = _x_slash_dates(text)
+    if re.search(r"\d{4}年", text):
+        groups = parse_jp_date_groups(text)
+    else:
+        groups = []
+        for y in (created.year, created.year + 1):
+            g = parse_jp_date_groups(
+                re.sub(r"(\d{1,2})月", f"{y}年" + r"\1" + u"月", text, count=1))
+            if g and g[0][0] >= created.isoformat():
+                groups = g
+                break
+    if not groups:
+        return (None, None)
+    s, e, _ = groups[0]
+    # 트윗보다 과거이거나 1년 넘게 먼 날짜는 회고·오기로 보고 버린다
+    if s < created.isoformat() or s > (created + timedelta(days=400)).isoformat():
+        return (None, None)
+    return (s, e or s)
+
+
+def _x_is_offline(text):
+    if any(k in text for k in X_HARD_EXCLUDE):
+        return False
+    if any(k in text for k in X_STRONG):
+        return True
+    if any(k in text for k in X_EXCLUDE):
+        return False
+    return any(k.lower() in text.lower() for k in X_INCLUDE)
+
+
+def collect_x():
+    """공식 X 계정들에서 오프라인 행사 후보를 뽑는다. src='x'.
+    요청 예산 안에서만 돌기 때문에, 계정이 많으면 여러 번의 실행에 걸쳐 순환 수집된다.
+    """
+    st = _x_state_load()
+    now = time.time()
+    if st.get("cooldown_until", 0) > now:
+        left = int(st["cooldown_until"] - now)
+        print(f"[i] X 쿨다운 중({left // 60}분 남음) → 이번 실행은 X 수집 생략")
+        return []
+
+    budget = _x_budget_left(st)
+    if budget <= 0:
+        print("[i] X 요청 예산 소진(시간/일일 한도) → 이번 실행은 X 수집 생략")
+        return []
+
+    # 마지막으로 받아온 지 오래된 계정부터. TTL 안에 이미 받은 계정은 건너뛴다.
+    todo = [a for a in X_ACCOUNTS
+            if now - st["accounts"].get(a, 0) >= X_ACCOUNT_TTL]
+    todo.sort(key=lambda a: st["accounts"].get(a, 0))
+    if not todo:
+        print("[i] X 계정 전부 최근에 수집함 → 생략")
+        return []
+    if len(todo) > budget:
+        print(f"[i] X 예산 {budget}건 → {len(todo)}개 계정 중 오래된 순 {budget}개만 (나머지는 다음 실행)")
+        todo = todo[:budget]
+
+    out = []
+    for i, acct in enumerate(todo):
+        if i:
+            time.sleep(X_GAP_SEC)                      # 요청 사이 간격
+        try:
+            tweets = _x_fetch_timeline(acct)
+        except _XRateLimited:
+            break                                      # 남은 계정은 다음 실행으로
+        for tw in tweets:
+            text = _x_strip(tw["text"])
+            if not _x_is_offline(text):
+                continue
+            start, end = _x_dates(text, tw["created"])
+            if not start:
+                continue
+            title = _x_title(text)
+            if not title or len(title) < 4:
+                continue
+            place = _x_place(text)
+            if not place and not any(k in text for k in X_ANNOUNCE):
+                continue                               # 장소도 공지 머리말도 없으면 잡음으로 간주
+            site = ""
+            for u in tw["urls"]:
+                if "bang-dream.com" in u:
+                    site = u
+                    break
+            out.append({
+                "title": title, "start": start, "end": end,
+                "place": place, "url": f"https://x.com/{acct}/status/{tw['id']}",
+                "category": "", "note": "", "src": "x",
+                "site_url": site, "excerpt": text[:700],
+                "acct": acct, "posted": tw["created"].isoformat(),
+            })
+    print(f"[+] X 오프라인 후보: {len(out)}건 (계정 {len(todo)}개 조회)")
+    return out
+
+
+# ----------------------------------------------------------------------------
+# X 행 중복 제거 (공식 사이트 행 우선)
+# ----------------------------------------------------------------------------
+def _norm_title(t):
+    """비교용 정규화: 괄호/기호/공백 제거, 전각영숫자→반각, 소문자."""
+    t = t or ""
+    t = "".join(chr(ord(c) - 0xFEE0) if "！" <= c <= "～" else c for c in t)
+    t = re.sub(r"[【】「」『』（）()\[\]<>《》]", " ", t)
+    t = re.sub(r"[\s　・･,、.。!?！？~〜\-–—/|:：]", "", t)
+    return t.lower()
+
+
+def _title_like(a, b):
+    """두 제목이 같은 행사인지. 포함관계 또는 3-gram Jaccard >= 0.45."""
+    a, b = _norm_title(a), _norm_title(b)
+    if not a or not b:
+        return False
+    if len(a) >= 6 and len(b) >= 6 and (a in b or b in a):
+        return True
+    ga = {a[i:i + 3] for i in range(max(len(a) - 2, 1))}
+    gb = {b[i:i + 3] for i in range(max(len(b) - 2, 1))}
+    if not ga or not gb:
+        return False
+    return len(ga & gb) / len(ga | gb) >= 0.45
+
+
+def _overlaps(a, b):
+    """기간이 겹치거나 3일 이내로 붙어 있으면 같은 행사로 볼 여지가 있다."""
+    from datetime import date, timedelta
+
+    def d(s):
+        try:
+            return date.fromisoformat(s)
+        except (ValueError, TypeError):
+            return None
+
+    a1, a2 = d(a.get("start")), d(a.get("end") or a.get("start"))
+    b1, b2 = d(b.get("start")), d(b.get("end") or b.get("start"))
+    if not (a1 and b1):
+        return False
+    a2, b2 = a2 or a1, b2 or b1
+    return a1 <= b2 + timedelta(days=3) and b1 <= a2 + timedelta(days=3)
+
+
+def merge_x_rows(site_rows, x_rows):
+    """X 후보를 사이트 행과 대조해 중복을 걸러내고, 남은 것만 돌려준다.
+    (1) 트윗이 가리키는 bang-dream.com URL이 이미 사이트에 있으면 버림.
+    (2) 기간이 겹치고 제목이 비슷한 사이트 행이 있으면 버림(사이트 쪽이 정보가 많음).
+    (3) X끼리도 같은 행사를 여러 번 트윗하므로 제목·기간으로 묶고 최신 트윗만 남김.
+    """
+    site_urls = {base_url(e.get("url", "")) for e in site_rows}
+
+    kept = []
+    for e in x_rows:
+        if e.get("site_url") and base_url(e["site_url"]) in site_urls:
+            print(f"    [x dup:url] {e['title'][:40]}")
+            continue
+        hit = next((s for s in site_rows
+                    if _overlaps(e, s) and _title_like(e["title"], s["title"])), None)
+        if hit:
+            print(f"    [x dup:title] {e['title'][:32]} = {hit['title'][:32]}")
+            continue
+        kept.append(e)
+
+    # (3) X 내부 중복 - 제목이 비슷하고 기간이 겹치면 한 덩어리로
+    merged = []
+    for e in sorted(kept, key=lambda x: x["posted"], reverse=True):   # 최신 트윗 우선
+        prev = next((m for m in merged
+                     if _overlaps(e, m) and _title_like(e["title"], m["title"])), None)
+        if prev is None:
+            merged.append(e)
+            continue
+        # 이미 담긴 쪽에 장소가 없고 새 쪽에 있으면 장소만 보충
+        if not prev.get("place") and e.get("place"):
+            prev["place"] = e["place"]
+        if not prev.get("site_url") and e.get("site_url"):
+            prev["site_url"] = e["site_url"]
+
+    for e in merged:
+        e["note"] = f"공식 X(@{e['acct']}) {e['posted']} 공지"
+        if e.get("site_url"):
+            e["note"] += f" · 상세 {e['site_url']}"
+    print(f"[+] X 최종 채택: {len(merged)}건 (후보 {len(x_rows)}건)")
+    return merged
 
 
 # ----------------------------------------------------------------------------
@@ -580,6 +963,7 @@ def apply_tour_suffix(dedup):
 def main():
     print("=== BanG Dream! 해외 이벤트 수집 시작 ===")
     scraped = collect_events() + collect_news()
+    x_candidates = collect_x()
 
     # 유효한 시작일이 있고, 아직 안 끝난 것만 (지난 행사는 프런트에서도 숨김)
     from datetime import date
@@ -606,6 +990,14 @@ def main():
     if not dedup:
         print("[!] 수집 결과 없음(네트워크 문제 가능). 기존 CSV 유지.")
         return 0
+
+    # 공식 X 보강: 사이트 행과 겹치지 않는 것만 추가한다(X는 항상 보조).
+    x_rows = [e for e in x_candidates
+              if (e.get("end") or e["start"]) >= today]
+    try:
+        dedup += merge_x_rows(dedup, x_rows)
+    except Exception as ex:                            # noqa: BLE001
+        print(f"[i] X 병합 예외(무시): {ex}")
 
     # 투어 접미사: 같은 제목이 2건 이상 남았을 때만 뒤에 '(장소)'를 붙여 구분한다.
     #   (한 건만 남으면 양일 라이브 등이므로 접미사 없음)
