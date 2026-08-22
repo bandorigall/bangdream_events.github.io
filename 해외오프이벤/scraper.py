@@ -776,6 +776,7 @@ def collect_x():
         todo = todo[:budget]
 
     out = []
+    done = 0
     for i, acct in enumerate(todo):
         if i:
             time.sleep(X_GAP_SEC)                      # 요청 사이 간격
@@ -783,6 +784,7 @@ def collect_x():
             tweets = _x_fetch_timeline(acct)
         except _XRateLimited:
             break                                      # 남은 계정은 다음 실행으로
+        done += 1
         for tw in tweets:
             text = _x_strip(tw["text"])
             if not _x_is_offline(text):
@@ -808,7 +810,7 @@ def collect_x():
                 "site_url": site, "excerpt": text[:700],
                 "acct": acct, "posted": tw["created"].isoformat(),
             })
-    print(f"[+] X 오프라인 후보: {len(out)}건 (계정 {len(todo)}개 조회)")
+    print(f"[+] X 오프라인 후보: {len(out)}건 (계정 {done}/{len(todo)}개 조회)")
     return out
 
 
