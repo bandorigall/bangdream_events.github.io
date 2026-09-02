@@ -395,3 +395,26 @@
       기존 "나눔·제단 안내는 추후 업데이트 예정" 문구는 제거.
     · 온리전 2건(@dreamonly_2027 최종 수요조사, @intothenewlily 백합 온리전 2회차 설문)은
       ★개최일·장소가 없어 캘린더/지도에 올릴 수 없다 → 계속 보류. 개최 공지 뜨면 추가할 것.
+
+  - 2026-09-02 [환경] 푸시가 막히던 원인 3가지 정리 + 두 컴퓨터 공용 해법.
+    ★ 대전제: 이 리포는 /home/mygo/mainpc 가 rclone(구글드라이브) fuse 마운트 위에 있다.
+      따라서 .git/config 도 드라이브에 있어 ★두 컴퓨터가 설정을 공유한다.
+      컴퓨터마다 다른 설정(core.hooksPath, credential.helper)을 .git/config 에 넣으면
+      다른 컴이 조용히 깨진다(특히 hooksPath 는 경로가 없으면 훅을 "없음"으로 처리 → 가드 무력화).
+    ① 느림: git status / git add . 가 워킹트리 전체를 stat 하는데 fuse 왕복이라 수 분 걸린다.
+       → 바뀐 파일만 지정해서 git add 할 것. (git status 는 타임아웃 날 수 있으니 남발 금지)
+    ② 훅 실행 불가: 드라이브는 실행 권한을 보존하지 않아 .git/hooks/* 가 644 로 고정된다.
+       chmod +x 는 I/O 오류로 실패. git push 시 "cannot exec '.git/hooks/pre-push': 허가 거부".
+       → [] update_and_push.sh 에 판정 로직 추가: 훅이 -x 면 그대로 쓰고,
+         아니면 --no-verify 로 우회하되 ★훅이 하던 신원 검사(tksqhddnfl5/snu.ac.kr)를
+         스크립트가 직접 수행한다. 스크립트는 양쪽 컴이 공유하므로 이 방식이 안전하다.
+       (core.hooksPath 로 로컬 디스크를 가리키는 방법은 다른 컴에서 가드가 꺼지므로 폐기.)
+    ③ 인증: remote 가 https://bandorigall@github.com/... 인데 ~/.git-credentials 에는
+       bandorigall 항목이 없었다(tksqhddnfl5, Changjo Yu 뿐) → Password 요구 → 실패.
+       gh CLI 에는 bandorigall 이 로그인돼 있어서 이걸 helper 로 쓴다.
+       ★이 컴에서만: gh auth switch --user bandorigall
+                     git config --global credential.helper '!gh auth git-credential'
+       (--global 이라 ~/.gitconfig = 로컬 디스크에 저장 → 다른 컴에 영향 없음.
+        .git/config 에 넣으면 안 된다.)
+    · .git/config 는 원래 상태로 복구함(hooksPath·credential.helper 제거).
+      남아 있는 [credential "https://github.com"] username=bandorigall 은 무해해서 유지.
