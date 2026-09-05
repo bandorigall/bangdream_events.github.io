@@ -418,3 +418,11 @@
         .git/config 에 넣으면 안 된다.)
     · .git/config 는 원래 상태로 복구함(hooksPath·credential.helper 제거).
       남아 있는 [credential "https://github.com"] username=bandorigall 은 무해해서 유지.
+
+  - 2026-09-05 13:23 전체 갱신 점검
+    · 해외 scraper.py 실행: events 10페이지 → 25건 저장(좌표 23건). 기존 CSV와 내용 동일 → 변경 없음.
+      ★X 수집은 bang_dream_info 429(레이트리밋)로 3시간 휴식 진입, 4계정 모두 조회 0.
+        다음 실행 때 X 후보가 잡히는지 확인할 것.
+    · make_page 재빌드 결과가 "데이터 업데이트" 타임스탬프 한 줄만 바뀌어 되돌림(무의미한 커밋 방지).
+    · .gitignore 신설(__pycache__/, *.pyc) + 이미 커밋돼 있던 make_page .pyc 추적 해제. 푸시 완료.
+  [결정사항] 스크래퍼 결과가 타임스탬프만 바뀌면 커밋하지 않는다.
