@@ -502,3 +502,7 @@
       포토이즘 HSp7Y7UaUAAeGD1/HSp7aVUbUAAEipY/HSp7bhIbMAAemLn.
       ★X 본문·이미지는 fxtwitter API 의 tweet.media.all 로 뽑는다(url 에 ?name=orig 가 이미 붙어 옴).
         pbs.twimg.com 은 CDN 이라 로그인 벽에 안 걸린다. small/medium 으로 바꾸면 축소본.
+    · (후속3) 이미지 링크를 일반 버튼과 같은 크기로 깐 게 오답이었음(사용자 지적).
+      ★규칙: "공지 이미지 N" 라벨은 본 버튼에서 분리해 .img-chip(🖼1 🖼2 🖼3 알약 칩) 한 줄로 깐다.
+        manyLinks(버튼 작게) 판정에서도 이미지 링크는 제외 — 곁다리 때문에 본 버튼이 작아지면 안 된다.
+        make_page.py: isImgLink/normalLinks/imgLinks 분리 + .img-chip-row/.img-chip CSS.
