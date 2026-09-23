@@ -975,7 +975,8 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             background: #fff; color: #d81b60; border: 1.5px solid #ffc1d9;
         }}
         .btn-super-main.btn-mini:hover {{ background: #fff2f7; }}
-        .img-chip-row {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }}
+        .img-chip-row {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }}
+        .img-chip-head {{ font-size: 0.75rem; font-weight: 700; color: #9e6b80; margin-right: 2px; }}
         .img-chip {{
             font-size: 0.75rem; font-weight: 600; padding: 4px 9px; border-radius: 999px;
             text-decoration: none; color: #9e6b80; background: #fff;
@@ -1262,10 +1263,12 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main${{mini}}" style="${{mt}}">${{label}}</a>`;
         }}).join('');
         if (imgLinks.length) {{
-            mainLinkHtml += `<div class="img-chip-row">` + imgLinks.map((m, i) => {{
-                const n = (m.label.match(/\d+/) || [i + 1])[0];
-                return `<a href="${{m.url}}" target="_blank" class="img-chip" title="${{m.label}} (원본)">🖼 ${{n}}</a>`;
-            }}).join('') + `</div>`;
+            mainLinkHtml += `<div class="img-chip-row">`
+                + `<span class="img-chip-head">🖼 공식 공지 원본 이미지</span>`
+                + imgLinks.map((m, i) => {{
+                    const n = (m.label.match(/\d+/) || [i + 1])[0];
+                    return `<a href="${{m.url}}" target="_blank" class="img-chip" title="${{m.label}} 원본 열기 (X 로그인 불필요)">${{n}}번째</a>`;
+                }}).join('') + `</div>`;
         }}
         let ticketHtml = (evt.ticket_links || []).map(m => {{
             const label = m.label ? `🎟️ ${{m.label}} 예매하러 가기` : '🎟️ 예매하러 가기';
