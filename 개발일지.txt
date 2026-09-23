@@ -497,3 +497,8 @@
     · (후속) 못 찾았던 9/22 팝업 상세 트윗 id 를 사용자가 제공: 2102231419351453965 (9/22 12:00 KST).
       fxtwitter 로 본문 대조 확인 후 매스커레이드 행 1순위 링크로 교체(9/17 최초 안내는 2순위로 유지).
       ★교훈: 로그아웃 x.com 으로는 프로필 과거 트윗을 못 캔다. 갤에 링크가 없으면 사용자에게 물어볼 것.
+    · (후속2) 공식 공지 이미지를 X 로그인 없이 보도록 pbs.twimg.com 직링크를 통합정보모음에 추가
+      ("공지 이미지 1~3"). 매스커레이드 HSp62Rva8AArdI2/HSp63fYaYAAxLU4/HSp64cyaoAAQYbU,
+      포토이즘 HSp7Y7UaUAAeGD1/HSp7aVUbUAAEipY/HSp7bhIbMAAemLn.
+      ★X 본문·이미지는 fxtwitter API 의 tweet.media.all 로 뽑는다(url 에 ?name=orig 가 이미 붙어 옴).
+        pbs.twimg.com 은 CDN 이라 로그인 벽에 안 걸린다. small/medium 으로 바꾸면 축소본.
