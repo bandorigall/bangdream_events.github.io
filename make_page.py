@@ -975,6 +975,13 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             background: #fff; color: #d81b60; border: 1.5px solid #ffc1d9;
         }}
         .btn-super-main.btn-mini:hover {{ background: #fff2f7; }}
+        .img-chip-row {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }}
+        .img-chip {{
+            font-size: 0.75rem; font-weight: 600; padding: 4px 9px; border-radius: 999px;
+            text-decoration: none; color: #9e6b80; background: #fff;
+            border: 1px solid #f0cfdd; line-height: 1.5;
+        }}
+        .img-chip:hover {{ background: #fff2f7; color: #d81b60; }}
         .btn-super-main:hover {{ transform: translateY(-2px); box-shadow: 0 6px 15px rgba(233, 30, 99, 0.3); }}
         .btn-ticket {{ background: linear-gradient(135deg, #00cd3c, #21d35d); box-shadow: 0 4px 10px rgba(0, 205, 60, 0.25); }}
         .btn-ticket:hover {{ box-shadow: 0 6px 15px rgba(0, 205, 60, 0.35); }}
@@ -1242,14 +1249,24 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         if (evt.has_cw) {{
             goodsBtnHtml = `<button onclick="openCwModal()" class="btn-super-main" style="background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1); margin-top:auto;">🎪 부스 굿즈 · 현장 이벤트 가이드 (ZA02)</button>`;
         }}
+        // "공지 이미지 N" 류는 본 버튼이 아니라 곁다리이므로 따로 모아 작은 칩으로 한 줄에 깐다
+        const isImgLink = m => /^공지 이미지/.test(m.label || '');
+        const normalLinks = (evt.main_links || []).filter(m => !isImgLink(m));
+        const imgLinks = (evt.main_links || []).filter(isImgLink);
         // 링크가 많은 행사는 버튼을 작게(btn-mini) — 안 그러면 버튼 벽이 된다
-        const manyLinks = (evt.main_links || []).length > 3;
-        let mainLinkHtml = (evt.main_links || []).map((m, i) => {{
+        const manyLinks = normalLinks.length > 3;
+        let mainLinkHtml = normalLinks.map((m, i) => {{
             const label = m.label ? `👉 ${{m.label}}` : '👉 통합 정보 확인하기';
             const mt = (evt.has_goods || evt.has_cw || evt.has_cgf || i > 0) ? 'margin-top:8px;' : '';
             const mini = manyLinks ? ' btn-mini' : '';
             return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main${{mini}}" style="${{mt}}">${{label}}</a>`;
         }}).join('');
+        if (imgLinks.length) {{
+            mainLinkHtml += `<div class="img-chip-row">` + imgLinks.map((m, i) => {{
+                const n = (m.label.match(/\d+/) || [i + 1])[0];
+                return `<a href="${{m.url}}" target="_blank" class="img-chip" title="${{m.label}} (원본)">🖼 ${{n}}</a>`;
+            }}).join('') + `</div>`;
+        }}
         let ticketHtml = (evt.ticket_links || []).map(m => {{
             const label = m.label ? `🎟️ ${{m.label}} 예매하러 가기` : '🎟️ 예매하러 가기';
             return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main btn-ticket" style="margin-top:10px;">${{label}}</a>`;
