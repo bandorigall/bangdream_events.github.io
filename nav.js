@@ -47,6 +47,8 @@
     '#site-nav-menu a:hover{background:#fff0f5;}' +
     '#site-nav-menu a.active{background:#ff4081;color:#fff;font-weight:700;}' +
     /* 화면이 낮은 기기에서는 버튼을 더 작게 */
+    /* 모바일: 세로 중앙이면 지도·지도버튼 끝을 가리므로 우하단으로 내린다 */
+    '@media (max-width:900px){#site-nav{top:auto;bottom:12px;transform:none;}#site-nav-menu{max-height:70vh;}}' +
     '@media (max-height:520px){#site-nav-btn{padding:10px 6px;font-size:12px;}' +
       '#site-nav-menu{max-height:70vh;}}';
   var st = document.createElement('style');
@@ -60,10 +62,16 @@
   btn.id = 'site-nav-btn';
   btn.setAttribute('aria-label', '다른 사이트로 이동');
   btn.setAttribute('title', '다른 사이트로 이동');
-  btn.innerHTML = '<span>☰</span><span>메뉴</span>';
+  btn.setAttribute('aria-expanded', 'false');
+  btn.setAttribute('aria-controls', 'site-nav-menu');
+  btn.innerHTML = '<span aria-hidden="true">☰</span><span>메뉴</span>';
+  function setOpen(on) {
+    wrap.classList.toggle('open', on);
+    btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+  }
   btn.addEventListener('click', function (e) {
     e.stopPropagation();
-    wrap.classList.toggle('open');
+    setOpen(!wrap.classList.contains('open'));
   });
 
   var menu = document.createElement('nav');
@@ -84,12 +92,12 @@
   wrap.appendChild(menu);
 
   document.addEventListener('click', function () {
-    wrap.classList.remove('open');
+    setOpen(false);
   });
   // 메뉴 내부 클릭이 '바깥 클릭'으로 오인돼 닫히지 않도록
   menu.addEventListener('click', function (e) { e.stopPropagation(); });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') wrap.classList.remove('open');
+    if (e.key === 'Escape' && wrap.classList.contains('open')) setOpen(false);
   });
 
   function mount() { document.body.appendChild(wrap); }

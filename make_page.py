@@ -300,9 +300,9 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     extra_css = """
         /* ===== 굿즈 계산기 모달 ===== */
         .gm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; }
-        .gm-box { background:#fff; width:min(820px,100%); max-height:90vh; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.3); }
+        .gm-box { background:#fff; width:min(820px,100%); max-height:90vh; max-height:calc(100dvh - 16px); border-radius:16px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.3); }
         .gm-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:linear-gradient(135deg,#ff4081,#ff80ab); color:#fff; font-weight:800; font-size:1.1rem; }
-        .gm-close { background:rgba(255,255,255,0.25); border:none; color:#fff; width:30px; height:30px; border-radius:50%; font-size:1rem; cursor:pointer; }
+        .gm-close { background:rgba(255,255,255,0.25); border:none; color:#fff; width:44px; height:44px; border-radius:50%; font-size:1.1rem; cursor:pointer; flex-shrink:0; }
         .gm-body { display:flex; min-height:0; flex:1; }
         .gm-list { flex:1.3; overflow-y:auto; padding:14px; border-right:1px solid #eee; }
         .gm-cart { flex:1; overflow-y:auto; padding:14px; background:#fcfafc; display:flex; flex-direction:column; }
@@ -316,25 +316,36 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .gm-add { border:none; background:#ff4081; color:#fff; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; flex-shrink:0; }
         .gm-add:hover { opacity:0.9; }
         .gm-cart h3 { margin:0 0 10px; font-size:1rem; }
-        .gm-empty { color:#aaa; text-align:center; padding:30px 0; font-size:0.85rem; }
+        .gm-empty { color:#666; text-align:center; padding:30px 0; font-size:0.85rem; }
         .gm-cart-row { display:flex; align-items:center; gap:6px; padding:7px 0; border-bottom:1px dashed #eee; font-size:0.82rem; }
         .gm-cart-name { flex:1; word-break:keep-all; }
         .gm-qtybox { display:flex; align-items:center; gap:6px; }
-        .gm-qtybox button { width:22px; height:22px; border:1px solid #ddd; background:#fff; border-radius:6px; cursor:pointer; font-weight:700; }
+        .gm-qtybox button { width:36px; height:36px; font-size:1rem; border:1px solid #ddd; background:#fff; border-radius:6px; cursor:pointer; font-weight:700; }
         .gm-cart-sub { width:74px; text-align:right; font-weight:600; }
         .gm-total { margin-top:auto; padding-top:14px; font-size:1.05rem; text-align:right; }
         .gm-total b { color:#ff4081; font-size:1.25rem; }
         .gm-bonus-title { margin-top:14px; font-weight:800; font-size:0.9rem; color:#444; }
-        .gm-bonus-row { margin-top:8px; padding:9px 11px; border-radius:8px; background:#f1f1f1; color:#999; font-size:0.85rem; }
+        .gm-bonus-row { margin-top:8px; padding:9px 11px; border-radius:8px; background:#f1f1f1; color:#666; font-size:0.85rem; }
         .gm-bonus-row.on { background:#fff0f5; color:#d81b60; font-weight:700; }
         .gm-bonus-row.clickable { cursor:pointer; }
         .gm-bonus-row.clickable:hover { outline:2px solid #ff80ab; }
         .gm-bonus-row span { font-weight:400; font-size:0.75rem; color:#b08; }
         .gm-hint { margin-top:8px; font-size:0.78rem; color:#ff8a00; text-align:right; }
-        .gm-note { margin-top:12px; font-size:0.72rem; color:#999; line-height:1.4; }
+        .gm-note { margin-top:12px; font-size:0.72rem; color:#666; line-height:1.4; }
         .gm-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:3000; align-items:center; justify-content:center; cursor:zoom-out; padding:20px; }
         .gm-lightbox img { max-width:95%; max-height:95%; border-radius:8px; }
-        @media (max-width:680px) { .gm-body { flex-direction:column; } .gm-list { border-right:none; border-bottom:1px solid #eee; } }
+        [data-lb] { cursor:zoom-in; }
+        .cw-card, .cw-card img { cursor:pointer; }
+        .gm-overlay [role=button]:focus-visible, .gm-lightbox:focus-visible { outline:3px solid #1a73e8; outline-offset:2px; }
+        @media (max-width:680px) {
+            .gm-overlay { padding:8px; }
+            .gm-header { padding:10px 12px 10px 16px; font-size:1rem; }
+            /* 모바일: 목록/장바구니 각각 스크롤하던 이중 스크롤 → 본문 하나만 스크롤 */
+            .gm-body { flex-direction:column; overflow-y:auto; overscroll-behavior:contain; }
+            .gm-list, .gm-cart { flex:none; overflow:visible; }
+            .gm-list { border-right:none; border-bottom:1px solid #eee; }
+            .gm-total { margin-top:12px; }
+        }
 
         /* ===== 카드 게임 페스티벌 2026 · 무겐다이 뮤타입 물판 ===== */
         .cg-header { background:linear-gradient(135deg,#38b6ff,#b39bff 55%,#ff7fc4); }
@@ -346,7 +357,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .cg-row { display:flex; align-items:center; gap:10px; border:1px solid #eee; border-radius:10px; padding:8px; margin-bottom:8px; }
         .cg-row img { width:84px; height:62px; object-fit:contain; cursor:zoom-in; flex-shrink:0; background:#fafafa; border-radius:6px; }
         .cg-row .nm { font-size:0.86rem; font-weight:700; word-break:keep-all; }
-        .cg-row .sz { font-size:0.72rem; color:#999; margin-top:2px; }
+        .cg-row .sz { font-size:0.72rem; color:#666; margin-top:2px; }
         .cg-tag { display:inline-block; margin-left:5px; padding:1px 6px; border-radius:999px; font-size:0.68rem; font-weight:700; background:#eef4ff; color:#5b6bd6; }
         .cg-tag.rand { background:#fff0f7; color:#d81b7a; }
         .cg-draw { margin-top:12px; padding:12px; border-radius:12px; background:linear-gradient(135deg,#f2f9ff,#ffeef7); border:1px solid #e2eefc; text-align:center; }
@@ -354,9 +365,9 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .cg-draw .sub { font-size:0.78rem; color:#777; margin-top:4px; word-break:keep-all; }
         .cg-bar { height:8px; border-radius:999px; background:#e9e9ef; overflow:hidden; margin-top:9px; }
         .cg-bar i { display:block; height:100%; background:linear-gradient(90deg,#38b6ff,#ff7fc4); }
-        .cg-rules { margin-top:12px; font-size:0.73rem; color:#8a8a8a; line-height:1.55; }
+        .cg-rules { margin-top:12px; font-size:0.73rem; color:#666; line-height:1.55; }
         .cg-rules li { margin-bottom:3px; }
-        .cg-src { margin-top:9px; font-size:0.7rem; color:#bbb; }
+        .cg-src { margin-top:9px; font-size:0.7rem; color:#666; }
 
         /* ===== 코믹월드 335 부스 가이드 ===== */
         .cw-header { background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1); }
@@ -376,30 +387,30 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .cw-row { display:flex; align-items:center; gap:10px; border:1px solid #eee; border-radius:10px; padding:8px; margin-bottom:8px; }
         .cw-row img { width:76px; height:56px; object-fit:contain; cursor:zoom-in; flex-shrink:0; }
         .cw-row .nm { font-size:0.86rem; font-weight:700; }
-        .cw-row .sz { font-size:0.72rem; color:#999; }
+        .cw-row .sz { font-size:0.72rem; color:#666; }
         .cw-mission { display:flex; gap:9px; align-items:flex-start; padding:8px 9px; border:1px solid #eee; border-radius:10px; margin-bottom:7px; cursor:pointer; }
         .cw-mission.on { border-color:#ff8ad1; background:#fff4fa; }
         .cw-mission input { margin-top:3px; accent-color:#e0348b; }
         .cw-mission .ml { font-size:0.82rem; font-weight:700; word-break:keep-all; }
-        .cw-mission .md { font-size:0.72rem; color:#999; margin-top:2px; word-break:keep-all; }
+        .cw-mission .md { font-size:0.72rem; color:#666; margin-top:2px; word-break:keep-all; }
         .cw-prize { display:flex; align-items:center; gap:9px; padding:7px; border-radius:9px; background:#f7f7f7; margin-top:7px; }
         .cw-prize.on { background:#fff0f7; }
         .cw-prize img { width:56px; height:40px; object-fit:contain; cursor:zoom-in; }
         .cw-prize .pn { flex:1; font-size:0.78rem; word-break:keep-all; }
         .cw-prize .pc { font-weight:800; color:#e0348b; font-size:0.86rem; }
         .cw-warn { margin-top:8px; font-size:0.75rem; color:#e0348b; font-weight:700; text-align:right; }
-        .cw-rules { margin-top:12px; font-size:0.73rem; color:#8a8a8a; line-height:1.55; }
+        .cw-rules { margin-top:12px; font-size:0.73rem; color:#666; line-height:1.55; }
         .cw-rules li { margin-bottom:3px; }
-        .cw-src { margin-top:9px; font-size:0.7rem; color:#bbb; }
+        .cw-src { margin-top:9px; font-size:0.7rem; color:#666; }
     """
 
     # 모달 HTML
     modal_html = """
-<div id="goods-modal" class="gm-overlay" onclick="if(event.target===this)closeGoodsModal()">
+<div id="goods-modal" class="gm-overlay" role="dialog" aria-modal="true" aria-labelledby="goods-modal-title" onclick="if(event.target===this)closeGoodsModal()">
   <div class="gm-box">
     <div class="gm-header">
-      <span>🛒 콜라보 카페 굿즈 · 메뉴 계산기</span>
-      <button class="gm-close" onclick="closeGoodsModal()">✕</button>
+      <span id="goods-modal-title">🛒 콜라보 카페 굿즈 · 메뉴 계산기</span>
+      <button type="button" class="gm-close" aria-label="닫기" onclick="closeGoodsModal()">✕</button>
     </div>
     <div class="gm-body">
       <div class="gm-list" id="gm-list"></div>
@@ -412,11 +423,11 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     </div>
   </div>
 </div>
-<div id="cw-modal" class="gm-overlay" onclick="if(event.target===this)closeCwModal()">
+<div id="cw-modal" class="gm-overlay" role="dialog" aria-modal="true" aria-labelledby="cw-modal-title" onclick="if(event.target===this)closeCwModal()">
   <div class="gm-box cw-box">
     <div class="gm-header cw-header">
-      <span>🎪 코믹월드 335 · 아워 노트 부스 가이드</span>
-      <button class="gm-close" onclick="closeCwModal()">✕</button>
+      <span id="cw-modal-title">🎪 코믹월드 335 · 아워 노트 부스 가이드</span>
+      <button type="button" class="gm-close" aria-label="닫기" onclick="closeCwModal()">✕</button>
     </div>
     <div class="cw-meta" id="cw-meta"></div>
     <div class="gm-body">
@@ -435,11 +446,11 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     </div>
   </div>
 </div>
-<div id="cg-modal" class="gm-overlay" onclick="if(event.target===this)closeCgModal()">
+<div id="cg-modal" class="gm-overlay" role="dialog" aria-modal="true" aria-labelledby="cg-modal-title" onclick="if(event.target===this)closeCgModal()">
   <div class="gm-box cg-box">
     <div class="gm-header cg-header">
-      <span>🛸 무겐다이 뮤타입 물판 · 사인회 추첨 계산기</span>
-      <button class="gm-close" onclick="closeCgModal()">✕</button>
+      <span id="cg-modal-title">🛸 무겐다이 뮤타입 물판 · 사인회 추첨 계산기</span>
+      <button type="button" class="gm-close" aria-label="닫기" onclick="closeCgModal()">✕</button>
     </div>
     <div class="cg-meta" id="cg-meta"></div>
     <div class="gm-body">
@@ -455,7 +466,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     </div>
   </div>
 </div>
-<div id="gm-lightbox" class="gm-lightbox" onclick="this.style.display='none'"><img id="gm-lightbox-img" alt=""></div>
+<div id="gm-lightbox" class="gm-lightbox" role="dialog" aria-modal="true" aria-label="원본 이미지 (클릭하거나 ESC로 닫기)" tabindex="-1" onclick="closeLightbox()"><img id="gm-lightbox-img" alt="원본 이미지"></div>
 """
 
     # 계산기 JS (일반 문자열)
@@ -464,8 +475,8 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     const CAFE_BONUS = __CAFE_BONUS__;
     let gmCart = {};
 
-    function openGoodsModal() { buildGoodsList(); renderCart(); document.getElementById('goods-modal').style.display='flex'; }
-    function closeGoodsModal() { document.getElementById('goods-modal').style.display='none'; }
+    function openGoodsModal() { buildGoodsList(); renderCart(); openOverlay('goods-modal'); }
+    function closeGoodsModal() { closeOverlay('goods-modal'); }
 
     function buildGoodsList() {
         const wrap = document.getElementById('gm-list');
@@ -474,18 +485,18 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         CAFE_GOODS.forEach(g => { (cats[g.cat] = cats[g.cat] || []).push(g); });
         let html = '';
         for (const c in cats) {
-            html += `<div class="gm-cat">${c}</div>`;
+            html += `<div class="gm-cat">${esc(c)}</div>`;
             cats[c].forEach(g => {
                 const bdayBadge = g.bday
                     ? `<span class="gm-bday-badge" title="돌로리스 생일 특전 대상 (6/26~7/2)">🎂 생일특전${typeof g.bday==='string' ? ' ('+g.bday+')' : ''}</span>`
                     : '';
                 html += `<div class="gm-item">
-                    <img src="${g.thumb}" class="gm-thumb" onclick="showLightbox('${g.full}')">
+                    <img src="${esc(g.thumb)}" class="gm-thumb" alt="${esc(g.name)} 이미지" data-lb="${esc(g.full)}" tabindex="0" role="button">
                     <div class="gm-info" onclick="addToCart('${g.id}')">
-                        <div class="gm-name">${g.name}${bdayBadge}</div>
+                        <div class="gm-name">${esc(g.name)}${bdayBadge}</div>
                         <div class="gm-price">${g.price.toLocaleString()}원</div>
                     </div>
-                    <button class="gm-add" onclick="addToCart('${g.id}')">담기</button>
+                    <button type="button" class="gm-add" onclick="addToCart('${g.id}')">담기</button>
                 </div>`;
             });
         }
@@ -507,9 +518,9 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
                 const g = CAFE_GOODS.find(x => x.id === id);
                 const q = gmCart[id];
                 h += `<div class="gm-cart-row">
-                    <span class="gm-cart-name">${g.name}</span>
+                    <span class="gm-cart-name">${esc(g.name)}</span>
                     <span class="gm-qtybox">
-                        <button onclick="changeQty('${id}',-1)">−</button><b>${q}</b><button onclick="changeQty('${id}',1)">＋</button>
+                        <button type="button" aria-label="하나 빼기" onclick="changeQty(\'${id}\',-1)">−</button><b>${q}</b><button type="button" aria-label="하나 더" onclick="changeQty(\'${id}\',1)">＋</button>
                     </span>
                     <span class="gm-cart-sub">${(g.price*q).toLocaleString()}원</span>
                 </div>`;
@@ -525,7 +536,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         const poster = Math.floor(total / 80000);
         let b = '<div class="gm-bonus-title">🎁 받을 수 있는 특전</div>';
         if (menuQty > 0) {
-            b += `<div class="gm-bonus-row on clickable" onclick="showLightbox('${CAFE_BONUS.coaster}')">🥤 메뉴 구매 특전 코스터 <b>${menuQty}장</b> <span>(메뉴 1개당 1장 · 클릭하여 보기)</span></div>`;
+            b += `<div class="gm-bonus-row on clickable" data-lb="${esc(CAFE_BONUS.coaster)}" tabindex="0" role="button">🥤 메뉴 구매 특전 코스터 <b>${menuQty}장</b> <span>(메뉴 1개당 1장 · 클릭하여 보기)</span></div>`;
         }
 
         // 돌로리스 생일 특전 (기간 한정: 2026-06-26 ~ 2026-07-02)
@@ -536,10 +547,10 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         const hasBday = ids.some(id => CAFE_GOODS.find(x => x.id === id).bday);
         if (hasBday) {
             const bdayTag = inBday ? '증정' : '대상 (기간 외)';
-            b += `<div class="gm-bonus-row ${inBday?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.coaster}')">🎂 돌로리스 생일 엽서 <b>${bdayTag}</b> <span>(6/26~7/2 한정 · 성배 드링크·개연의 만찬 햄버거·돌로리스 굿즈(랜덤굿즈 제외) 구매 시 1장 · 클릭하여 보기)</span></div>`;
+            b += `<div class="gm-bonus-row ${inBday?'on':''} clickable" data-lb="${esc(CAFE_BONUS.coaster)}" tabindex="0" role="button">🎂 돌로리스 생일 엽서 <b>${bdayTag}</b> <span>(6/26~7/2 한정 · 성배 드링크·개연의 만찬 햄버거·돌로리스 굿즈(랜덤굿즈 제외) 구매 시 1장 · 클릭하여 보기)</span></div>`;
         }
-        b += `<div class="gm-bonus-row ${card>0?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.postcard_poster}')">🎴 홀로그램 엽서 <b>${card}장</b> <span>(4만원당 1장 · 클릭하여 보기)</span></div>`;
-        b += `<div class="gm-bonus-row ${poster>0?'on':''} clickable" onclick="showLightbox('${CAFE_BONUS.postcard_poster}')">🖼️ A3 펄 포스터 <b>${poster}장</b> <span>(8만원당 1장 · 클릭하여 보기)</span></div>`;
+        b += `<div class="gm-bonus-row ${card>0?'on':''} clickable" data-lb="${esc(CAFE_BONUS.postcard_poster)}" tabindex="0" role="button">🎴 홀로그램 엽서 <b>${card}장</b> <span>(4만원당 1장 · 클릭하여 보기)</span></div>`;
+        b += `<div class="gm-bonus-row ${poster>0?'on':''} clickable" data-lb="${esc(CAFE_BONUS.postcard_poster)}" tabindex="0" role="button">🖼️ A3 펄 포스터 <b>${poster}장</b> <span>(8만원당 1장 · 클릭하여 보기)</span></div>`;
         if (total > 0 && total % 40000 !== 0) {
             b += `<div class="gm-hint">${(40000-(total%40000)).toLocaleString()}원 더 담으면 엽서 1장 추가</div>`;
         }
@@ -547,41 +558,107 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         document.getElementById('gm-bonus').innerHTML = b;
     }
 
-    function showLightbox(src) {
-        document.getElementById('gm-lightbox-img').src = src;
-        document.getElementById('gm-lightbox').style.display = 'flex';
+    // ---- 모달 공통: 열기/닫기, 포커스, 배경 스크롤 잠금, ESC ----
+    let lastFocus = null, lbFocus = null;
+    const OVERLAYS = ['goods-modal', 'cw-modal', 'cg-modal'];
+    function syncBodyLock() {
+        const anyOpen = OVERLAYS.concat(['gm-lightbox']).some(id => document.getElementById(id).style.display === 'flex');
+        document.body.classList.toggle('modal-open', anyOpen);
     }
+    function openOverlay(id) {
+        lastFocus = document.activeElement;
+        const el = document.getElementById(id);
+        el.style.display = 'flex';
+        syncBodyLock();
+        const c = el.querySelector('.gm-close');
+        if (c) c.focus();
+    }
+    function closeOverlay(id) {
+        document.getElementById(id).style.display = 'none';
+        syncBodyLock();
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    function showLightbox(src) {
+        lbFocus = document.activeElement;
+        document.getElementById('gm-lightbox-img').src = src;
+        const lb = document.getElementById('gm-lightbox');
+        lb.style.display = 'flex';
+        syncBodyLock();
+        lb.focus();
+    }
+    function closeLightbox() {
+        document.getElementById('gm-lightbox').style.display = 'none';
+        syncBodyLock();
+        if (lbFocus && lbFocus.focus) lbFocus.focus();
+    }
+    // data-lb="이미지경로" 요소 클릭 → 라이트박스 (onclick 문자열에 URL 직접 삽입 안 함)
+    document.addEventListener('click', function (e) {
+        const t = e.target.closest('[data-lb]');
+        if (!t) return;
+        e.stopPropagation();
+        showLightbox(t.dataset.lb);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Tab') {
+            const lbOpen = document.getElementById('gm-lightbox').style.display === 'flex';
+            const oid = lbOpen ? null : OVERLAYS.find(id => document.getElementById(id).style.display === 'flex');
+            if (lbOpen) { e.preventDefault(); return; }  // 라이트박스는 포커스 고정
+            if (oid) {
+                const box = document.getElementById(oid);
+                const f = [...box.querySelectorAll('button, a[href], input, [tabindex]:not([tabindex="-1"])')]
+                    .filter(el => el.offsetParent !== null);
+                if (!f.length) return;
+                const first = f[0], last = f[f.length - 1];
+                if (e.shiftKey && (document.activeElement === first || !box.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+                else if (!e.shiftKey && (document.activeElement === last || !box.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+            }
+            return;
+        }
+        if (e.key === 'Escape') {
+            // 라이트박스가 위에 떠 있으면 그것부터 닫는다
+            if (document.getElementById('gm-lightbox').style.display === 'flex') { closeLightbox(); return; }
+            const open = OVERLAYS.find(id => document.getElementById(id).style.display === 'flex');
+            if (open) closeOverlay(open);
+            return;
+        }
+        // div/span/img 에 role=button 을 붙인 요소는 Enter/Space 로도 동작
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[role=button]:not(button):not(a)')) {
+            if (e.target.classList.contains('event-card')) return;  // 카드는 자체 핸들러
+            e.preventDefault();
+            e.target.click();
+        }
+    });
     """
     # ---- 코믹월드 335 부스 가이드 JS ----
     goods_js += """
     const CW = __CW_DATA__;
     let cwCart = {}, cwMission = {};
 
-    function openCwModal() { buildCwModal(); renderCw(); document.getElementById('cw-modal').style.display='flex'; }
-    function closeCwModal() { document.getElementById('cw-modal').style.display='none'; }
+    function openCwModal() { buildCwModal(); renderCw(); openOverlay('cw-modal'); }
+    function closeCwModal() { closeOverlay('cw-modal'); }
 
     function buildCwModal() {
         const meta = document.getElementById('cw-meta');
         if (meta.dataset.built) return;
         const i = CW.info;
-        meta.innerHTML = `<span class="cw-chip">📍 ${i.place} <b>${i.booth}</b></span>
-            <span class="cw-chip">📅 ${i.date}</span>
+        meta.innerHTML = `<span class="cw-chip">📍 ${esc(i.place)} <b>${esc(i.booth)}</b></span>
+            <span class="cw-chip">📅 ${esc(i.date)}</span>
             <span class="cw-chip">🛍️ 품목별 최대 ${i.limit}개</span>
-            <span class="cw-chip link" onclick="showLightbox('${i.event_img}')">🖼️ 이벤트 공지 원본</span>
-            <span class="cw-chip link" onclick="showLightbox('${i.sale_img}')">🖼️ 판매 공지 원본</span>`;
+            <span class="cw-chip link" data-lb="${esc(i.event_img)}" tabindex="0" role="button">🖼️ 이벤트 공지 원본</span>
+            <span class="cw-chip link" data-lb="${esc(i.sale_img)}" tabindex="0" role="button">🖼️ 판매 공지 원본</span>`;
 
         const cats = {};
         CW.goods.forEach(g => { (cats[g.cat] = cats[g.cat] || []).push(g); });
         let html = '';
         for (const c in cats) {
             const isChar = c.indexOf('캐릭터') === 0;
-            html += `<div class="cw-cat">${c}</div>`;
+            html += `<div class="cw-cat">${esc(c)}</div>`;
             if (isChar) {
                 html += '<div class="cw-grid">';
                 cats[c].forEach(g => {
-                    html += `<div class="cw-card" id="cwc-${g.id}" onclick="cwAdd('${g.id}')" title="클릭: 담기 / 이미지 우측 상단 🔍: 원본 보기">
-                        <img src="${g.thumb}" alt="${g.name}">
-                        <div class="nm">${g.name}</div>
+                    html += `<div class="cw-card" id="cwc-${g.id}" tabindex="0" role="button" aria-label="${esc(g.name)} 담기" onclick="cwAdd('${g.id}')" title="클릭: 담기">
+                        <img src="${esc(g.thumb)}" alt="${esc(g.name)}">
+                        <div class="nm">${esc(g.name)}</div>
                         <div class="qty" id="cwq-${g.id}"></div>
                     </div>`;
                 });
@@ -589,12 +666,12 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             } else {
                 cats[c].forEach(g => {
                     html += `<div class="cw-row">
-                        <img src="${g.thumb}" onclick="showLightbox('${g.full}')" alt="${g.name}">
+                        <img src="${esc(g.thumb)}" data-lb="${esc(g.full)}" tabindex="0" role="button" alt="${esc(g.name)}">
                         <div style="flex:1;cursor:pointer;" onclick="cwAdd('${g.id}')">
-                            <div class="nm">${g.name}</div>
-                            <div class="sz">${g.size} · ${g.price.toLocaleString()}원</div>
+                            <div class="nm">${esc(g.name)}</div>
+                            <div class="sz">${esc(g.size)} · ${g.price.toLocaleString()}원</div>
                         </div>
-                        <button class="gm-add" style="background:#6a5cff;" onclick="cwAdd('${g.id}')">담기</button>
+                        <button type="button" class="gm-add" style="background:#6a5cff;" onclick="cwAdd('${g.id}')">담기</button>
                     </div>`;
                 });
             }
@@ -604,7 +681,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         document.getElementById('cw-missions').innerHTML = CW.missions.map(m =>
             `<label class="cw-mission" id="cwm-${m.id}">
                 <input type="checkbox" onchange="cwToggle('${m.id}', this.checked)">
-                <span><span class="ml">${m.label}</span><span class="md">${m.desc}</span></span>
+                <span><span class="ml">${esc(m.label)}</span><span class="md">${esc(m.desc)}</span></span>
             </label>`).join('');
 
         document.getElementById('cw-rules').innerHTML =
@@ -640,9 +717,9 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             box.innerHTML = ids.map(id => {
                 const g = find(id), q = cwCart[id];
                 return `<div class="gm-cart-row">
-                    <span class="gm-cart-name">${g.name}</span>
+                    <span class="gm-cart-name">${esc(g.name)}</span>
                     <span class="gm-qtybox">
-                        <button onclick="cwQty('${id}',-1)">−</button><b>${q}</b><button onclick="cwQty('${id}',1)">＋</button>
+                        <button type="button" aria-label="하나 빼기" onclick="cwQty(\'${id}\',-1)">−</button><b>${q}</b><button type="button" aria-label="하나 더" onclick="cwQty(\'${id}\',1)">＋</button>
                     </span>
                     <span class="gm-cart-sub">${(g.price*q).toLocaleString()}원</span>
                 </div>`;
@@ -665,8 +742,8 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         document.getElementById('cw-prizes').innerHTML = Object.keys(CW.prizes).map(k => {
             const p = CW.prizes[k], n = got[k] || 0;
             return `<div class="cw-prize ${n?'on':''}">
-                <img src="${p.thumb}" onclick="showLightbox('${CW.info.event_img}')" alt="${p.name}">
-                <span class="pn">${p.name}</span><span class="pc">${n}개</span>
+                <img src="${esc(p.thumb)}" data-lb="${esc(CW.info.event_img)}" tabindex="0" role="button" alt="${esc(p.name)}">
+                <span class="pn">${esc(p.name)}</span><span class="pc">${n}개</span>
             </div>`;
         }).join('');
     }
@@ -677,30 +754,30 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     const CG = __CG_DATA__;
     let cgCart = {};
 
-    function openCgModal() { buildCgModal(); renderCg(); document.getElementById('cg-modal').style.display='flex'; }
-    function closeCgModal() { document.getElementById('cg-modal').style.display='none'; }
+    function openCgModal() { buildCgModal(); renderCg(); openOverlay('cg-modal'); }
+    function closeCgModal() { closeOverlay('cg-modal'); }
 
     function buildCgModal() {
         const meta = document.getElementById('cg-meta');
         if (meta.dataset.built) return;
         const i = CG.info;
-        meta.innerHTML = `<span class="cg-chip">📍 ${i.place}</span>
-            <span class="cg-chip">🎲 추첨 <b>${i.draw_time}</b></span>
-            <span class="cg-chip">🎤 퀴즈쇼&amp;사인회 ${i.show_time}</span>
-            <span class="cg-chip">👤 ${i.guests}</span>
-            <span class="cg-chip link" onclick="showLightbox('${i.goods_img}')">🖼️ 굿즈 공지 원본</span>
-            <span class="cg-chip link" onclick="showLightbox('${i.lottery_img}')">🖼️ 추첨 공지 원본</span>`;
+        meta.innerHTML = `<span class="cg-chip">📍 ${esc(i.place)}</span>
+            <span class="cg-chip">🎲 추첨 <b>${esc(i.draw_time)}</b></span>
+            <span class="cg-chip">🎤 퀴즈쇼&amp;사인회 ${esc(i.show_time)}</span>
+            <span class="cg-chip">👤 ${esc(i.guests)}</span>
+            <span class="cg-chip link" data-lb="${esc(i.goods_img)}" tabindex="0" role="button">🖼️ 굿즈 공지 원본</span>
+            <span class="cg-chip link" data-lb="${esc(i.lottery_img)}" tabindex="0" role="button">🖼️ 추첨 공지 원본</span>`;
 
         document.getElementById('cg-list').innerHTML = CG.goods.map(g => {
             const tag = g.kind === '랜덤' ? '<span class="cg-tag rand">랜덤</span>'
                       : (g.kind === '종류별' ? '<span class="cg-tag">종류별</span>' : '');
             return `<div class="cg-row">
-                <img src="${g.thumb}" onclick="showLightbox('${CG.info.goods_img}')" alt="${g.name}">
+                <img src="${esc(g.thumb)}" data-lb="${esc(CG.info.goods_img)}" tabindex="0" role="button" alt="${esc(g.name)}">
                 <div style="flex:1;cursor:pointer;" onclick="cgAdd('${g.id}')">
-                    <div class="nm">${g.name}${tag}</div>
-                    <div class="sz">${g.size} · ${g.price.toLocaleString()}원</div>
+                    <div class="nm">${esc(g.name)}${tag}</div>
+                    <div class="sz">${esc(g.size)} · ${g.price.toLocaleString()}원</div>
                 </div>
-                <button class="gm-add" style="background:#38b6ff;" onclick="cgAdd('${g.id}')">담기</button>
+                <button type="button" class="gm-add" style="background:#38b6ff;" onclick="cgAdd('${g.id}')">담기</button>
             </div>`;
         }).join('');
 
@@ -722,9 +799,9 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             box.innerHTML = ids.map(id => {
                 const g = find(id), q = cgCart[id];
                 return `<div class="gm-cart-row">
-                    <span class="gm-cart-name">${g.name}</span>
+                    <span class="gm-cart-name">${esc(g.name)}</span>
                     <span class="gm-qtybox">
-                        <button onclick="cgQty('${id}',-1)">−</button><b>${q}</b><button onclick="cgQty('${id}',1)">＋</button>
+                        <button type="button" aria-label="하나 빼기" onclick="cgQty(\'${id}\',-1)">−</button><b>${q}</b><button type="button" aria-label="하나 더" onclick="cgQty(\'${id}\',1)">＋</button>
                     </span>
                     <span class="gm-cart-sub">${(g.price*q).toLocaleString()}원</span>
                 </div>`;
@@ -767,40 +844,47 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
     <title>BanG Dream! 한국 오프라인 이벤트 목록</title>
-    
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+    <script defer src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        :root {{ 
-            --bg: #f4f6f8; 
-            --accent: #ff4081; 
-            --dark: #333; 
+        :root {{
+            --bg: #f4f6f8;
+            --accent: #ff4081;
+            --dark: #333;
             --gray: #b0b0b0;
+            color-scheme: light;
         }}
-        body {{ 
-            margin: 0; padding: 0; 
-            font-family: 'Pretendard', -apple-system, sans-serif; 
-            background: var(--bg); 
-            height: 100vh; 
-            display: flex; 
-            overflow: hidden; 
-            color: var(--dark); 
+        body {{
+            margin: 0; padding: 0;
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            color: var(--dark);
         }}
-        
-        .left-panel {{ 
-            width: 50%; 
-            padding: 25px; 
-            background: #fff; 
-            border-right: 1px solid #e0e0e0; 
+        body.modal-open {{ overflow: hidden !important; }}
+        body.modal-open #site-nav {{ display: none; }}
+        .btn-super-main {{ word-break: keep-all; }}
+        :focus-visible {{ outline: 3px solid #1a73e8; outline-offset: 2px; }}
+
+        .left-panel {{
+            width: 50%;
+            padding: 25px;
+            background: #fff;
+            border-right: 1px solid #e0e0e0;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             z-index: 10;
+            min-width: 0;
         }}
-        
+
         h1.page-title {{
             font-size: 1.8rem;
             margin: 0 0 18px 0;
@@ -808,6 +892,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             font-weight: 800;
             text-align: center;
             flex-shrink: 0;
+            word-break: keep-all;
         }}
 
         .tab-bar {{
@@ -821,7 +906,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             padding: 12px 10px;
             border: 2px solid #eee;
             background: #fafafa;
-            color: #888;
+            color: #666;
             font-size: 1rem;
             font-weight: 700;
             border-radius: 10px;
@@ -835,11 +920,11 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             color: #fff;
             box-shadow: 0 4px 10px rgba(233, 30, 99, 0.2);
         }}
-        
+
         .card-list-container {{
-            flex: 1; 
-            overflow-y: auto; 
-            padding-right: 5px; 
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
         }}
 
         #card-list {{
@@ -851,7 +936,7 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .footer-credits {{
             text-align: center;
             font-size: 0.8rem;
-            color: #999;
+            color: #666;
             padding-top: 20px;
             margin-top: auto;
             font-weight: 500;
@@ -860,82 +945,105 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         }}
 
         .event-card {{
-            background: #ffffff; 
-            border: 1px solid #eee; 
+            background: #ffffff;
+            border: 1px solid #eee;
             border-radius: 12px;
-            padding: 15px; 
+            padding: 15px;
             cursor: pointer;
-            transition: all 0.2s ease; 
+            transition: all 0.2s ease;
             position: relative;
-            display: flex; 
-            flex-direction: column; 
+            display: flex;
+            flex-direction: column;
             justify-content: space-between;
+            min-width: 0;
         }}
-        .event-card:hover {{ 
-            transform: translateY(-3px); 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08); 
-            border-color: var(--accent); 
+        .event-card:hover {{
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-color: var(--accent);
         }}
-        .event-card.active {{ 
-            border: 2px solid var(--accent); 
-            background: #fff0f5; 
+        .event-card:focus-visible {{ outline: 3px solid #1a73e8; outline-offset: 2px; }}
+        .event-card.active {{
+            border: 2px solid var(--accent);
+            background: #fff0f5;
         }}
-        
-        .card-title {{ font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; word-break: keep-all; }}
-        .card-date {{ font-size: 0.85rem; color: #666; margin-bottom: 5px; }}
-        .card-loc {{ font-size: 0.85rem; color: #555; font-weight: 500; }}
 
-        .right-panel {{ 
-            width: 50%; 
-            display: flex; 
-            flex-direction: column; 
+        .card-badge {{
+            align-self: flex-start; display: inline-block; margin-bottom: 7px;
+            padding: 2px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 800;
+            background: #eef1f5; color: #4a5568;
         }}
-        
-        .top-calendar {{ 
-            height: 45%; 
-            padding: 20px; 
-            background: #fff; 
-            border-bottom: 1px solid #ddd; 
+        .card-badge.live {{ background: #e6f9ee; color: #12803f; }}
+        .card-badge.soon {{ background: #fff0f5; color: #c2185b; }}
+        .card-title {{ font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; word-break: keep-all; overflow-wrap: anywhere; }}
+        .card-date {{ font-size: 0.85rem; color: #666; margin-bottom: 5px; }}
+        .card-loc {{ font-size: 0.85rem; color: #555; font-weight: 500; overflow-wrap: anywhere; }}
+
+        .right-panel {{
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }}
+
+        .top-calendar {{
+            height: 38%;
+            padding: 20px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
             overflow: hidden;
+            box-sizing: border-box;
+            min-height: 300px;
         }}
-        
-        .bottom-container {{ 
-            height: 55%; 
-            display: flex; 
-            background: #fff; 
+        .fc .fc-toolbar-title {{ white-space: nowrap; }}
+        /* 칸이 낮아도 이벤트 막대가 들어가도록 날짜 숫자를 작게 */
+        .fc .fc-daygrid-day-number {{ padding: 1px 4px; font-size: 0.78rem; }}
+        .fc .fc-daygrid-day-top {{ line-height: 1.2; }}
+        .fc .fc-daygrid-event {{ font-size: 0.72rem; }}
+        .fc .fc-daygrid-day-events {{ margin-bottom: 1px; }}
+
+        .bottom-container {{
+            height: 62%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: #fff;
+            min-height: 0;
         }}
 
         .info-area {{
-            width: 340px; 
-            min-width: 300px; 
+            min-width: 0;
             padding: 25px;
-            border-right: 1px solid #eee; 
+            box-sizing: border-box;
+            border-right: 1px solid #eee;
             overflow-y: auto;
-            display: flex; 
-            flex-direction: column; 
+            display: flex;
+            flex-direction: column;
             background: #fcfcfc;
         }}
-        
-        .map-area {{ 
-            flex: 1; 
-            position: relative; 
+
+        .map-area {{
+            position: relative;
+            min-width: 0;
+            min-height: 0;
         }}
         #map {{ width: 100%; height: 100%; z-index: 1; }}
 
-        .panel-header {{ font-size: 1.4rem; font-weight: 800; margin-bottom: 15px; color: var(--accent); line-height: 1.2; }}
-        .empty-msg {{ color: #999; text-align: center; margin-top: 50px; }}
-        
-        .btn-group {{ display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }}
-        .btn {{ 
-            padding: 10px 14px; border-radius: 8px; text-decoration: none; 
+        .panel-header {{ font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; color: var(--accent); line-height: 1.2; word-break: keep-all; overflow-wrap: anywhere; flex: 0 0 auto; }}
+        .panel-meta {{ font-size: 0.88rem; color: #555; margin-bottom: 14px; line-height: 1.5; flex: 0 0 auto; overflow-wrap: anywhere; }}
+        .empty-msg {{ color: #666; text-align: center; margin-top: 50px; line-height: 1.6; }}
+
+        .btn-group {{ display: flex; flex-direction: column; gap: 8px; margin: 6px 0 4px; flex: 0 0 auto; }}
+        .btn {{
+            padding: 10px 14px; border-radius: 8px; text-decoration: none;
             font-size: 0.9rem; font-weight: 600; color: white; border: none; cursor: pointer;
             display: flex; align-items: center; justify-content: space-between; transition: 0.2s;
         }}
         .btn:hover {{ opacity: 0.9; transform: translateX(3px); }}
         .btn-naver {{ background-color: #03C75A; }}
+        .btn-zoom {{ background-color: #fff; color: #c2185b; border: 1.5px solid #ffc1d9; font-family: inherit; text-align: left; }}
         .btn-kakao {{ background-color: #FEE500; color: #191919; }}
-        
-        .note-text {{ font-size: 0.9rem; background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 15px; }}
+
+        .note-text {{ font-size: 0.9rem; background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 15px; overflow-wrap: anywhere; }}
 
         /* 비고를 【머리말】 단위로 쪼개 카드로 표시 (양일 행사 토/일 구분용) */
         /* .info-area 가 flex column 이라 flex:none 이 없으면 카드가 찌부러진다 */
@@ -946,9 +1054,9 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             background: #ffe9a8; color: #7a5b00; letter-spacing: -0.2px;
         }}
         .note-sec > ul {{ margin: 0; padding: 9px 12px 10px 28px; }}
-        .note-sec > ul > li {{ font-size: 0.84rem; line-height: 1.5; color: #5c4a1a; margin-bottom: 4px; }}
+        .note-sec > ul > li {{ font-size: 0.84rem; line-height: 1.5; color: #5c4a1a; margin-bottom: 4px; overflow-wrap: anywhere; }}
         .note-sec > ul > li:last-child {{ margin-bottom: 0; }}
-        .note-sec > ul > li.is-caveat {{ list-style: none; margin-left: -16px; color: #8d7a4a; font-size: 0.78rem; }}
+        .note-sec > ul > li.is-caveat {{ list-style: none; margin-left: -16px; color: #7a6a3e; font-size: 0.78rem; }}
         .note-sec .note-time {{ font-weight: 700; color: #d1477a; }}
         .note-sec.is-sat {{ border-color: #b9d8ff; background: #f7fbff; }}
         .note-sec.is-sat > h4 {{ background: #d6e9ff; color: #14508f; }}
@@ -960,11 +1068,13 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .note-sec.is-shop > h4 {{ background: #d9f0e0; color: #1d6b3a; }}
         .note-sec.is-shop > ul > li {{ color: #2c5c3d; }}
 
+        .link-block {{ flex: 0 0 auto; margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }}
+        .goods-block {{ flex: 0 0 auto; margin-bottom: 14px; }}
         .btn-super-main {{
-            display: block; width: 100%; box-sizing: border-box; text-align: center; 
+            display: block; width: 100%; box-sizing: border-box; text-align: center;
             background: linear-gradient(135deg, #ff4081, #ff80ab); color: white;
-            font-size: 1.1rem; font-weight: bold; padding: 15px; 
-            border-radius: 12px; margin-top: auto; 
+            font-size: 1.1rem; font-weight: bold; padding: 15px;
+            border-radius: 12px; margin-top: 0; border: none; cursor: pointer; font-family: inherit;
             text-decoration: none; box-shadow: 0 4px 10px rgba(233, 30, 99, 0.2);
             transition: 0.2s;
             flex: 0 0 auto;
@@ -975,11 +1085,11 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             background: #fff; color: #d81b60; border: 1.5px solid #ffc1d9;
         }}
         .btn-super-main.btn-mini:hover {{ background: #fff2f7; }}
-        .img-chip-row {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }}
-        .img-chip-head {{ font-size: 0.75rem; font-weight: 700; color: #9e6b80; margin-right: 2px; }}
+        .img-chip-row {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }}
+        .img-chip-head {{ font-size: 0.75rem; font-weight: 700; color: #8a5a6e; margin-right: 2px; }}
         .img-chip {{
             font-size: 0.75rem; font-weight: 600; padding: 4px 9px; border-radius: 999px;
-            text-decoration: none; color: #9e6b80; background: #fff;
+            text-decoration: none; color: #8a5a6e; background: #fff;
             border: 1px solid #f0cfdd; line-height: 1.5;
         }}
         .img-chip:hover {{ background: #fff2f7; color: #d81b60; }}
@@ -988,13 +1098,22 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         .btn-ticket:hover {{ box-shadow: 0 6px 15px rgba(0, 205, 60, 0.35); }}
 
         @media (max-width: 900px) {{
-            body {{ flex-direction: column; overflow: auto; }}
+            body {{ display: block; height: auto; overflow-x: hidden; overflow-y: auto; }}
             .left-panel, .right-panel {{ width: 100%; height: auto; }}
-            .left-panel {{ height: 500px; border-bottom: 5px solid #eee; }}
-            #card-list {{ grid-template-columns: 1fr; }} 
-            .bottom-container {{ flex-direction: column; height: auto; }}
-            .info-area {{ width: 100%; height: auto; border-right: none; border-bottom: 1px solid #ddd; }}
-            .map-area {{ height: 400px; }}
+            /* nav.js 우측 고정 메뉴 버튼(약 30px)과 카드가 겹치지 않게 오른쪽 여백 확보 */
+            .left-panel {{ height: auto; padding: 18px 44px 18px 16px; border-right: none; border-bottom: 5px solid #eee; }}
+            h1.page-title {{ font-size: 1.4rem; margin-bottom: 14px; }}
+            .card-list-container {{ flex: none; max-height: 60vh; overscroll-behavior: contain; }}
+            #card-list {{ grid-template-columns: 1fr; gap: 12px; }}
+            .footer-credits {{ padding-top: 14px; }}
+            .top-calendar {{ height: auto !important; min-height: 0; overflow: visible !important; padding: 14px 12px; }}
+            .top-calendar .fc-scroller, .top-calendar .fc-view-harness {{ height: auto !important; overflow: visible !important; }}
+            .fc .fc-toolbar-title {{ font-size: 1.1rem; }}
+            .fc .fc-button {{ min-height: 40px; min-width: 40px; }}
+            .bottom-container {{ display: flex; flex-direction: column; height: auto; }}
+            .info-area {{ width: 100%; min-width: 0; height: auto; padding: 18px 16px 18px 16px; border-right: none; border-bottom: 1px solid #ddd; overflow: visible; }}
+            .map-area {{ flex: none; height: 400px; margin-bottom: 72px; }}
+            .img-chip {{ padding: 8px 12px; }}
         }}
         {extra_css}
     </style>
@@ -1003,11 +1122,11 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
 
 <div class="left-panel">
     <h1 class="page-title" id="page-title">BanG Dream!<br>한국 오프라인 이벤트 목록</h1>
-    <div class="tab-bar">
-        <button class="tab-btn active" data-tab="korea" onclick="switchTab('korea')">🇰🇷 국내</button>
-        <button class="tab-btn" data-tab="overseas" onclick="switchTab('overseas')">🌏 해외</button>
+    <div class="tab-bar" role="tablist">
+        <button class="tab-btn active" data-tab="korea" role="tab" aria-selected="true" onclick="switchTab('korea')">🇰🇷 국내</button>
+        <button class="tab-btn" data-tab="overseas" role="tab" aria-selected="false" onclick="switchTab('overseas')">🌏 해외</button>
     </div>
-    <div class="card-list-container">
+    <div class="card-list-container" id="card-list-container">
         <div id="card-list"></div>
     </div>
     <div class="footer-credits">
@@ -1022,9 +1141,9 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         <div id='calendar'></div>
     </div>
     <div class="bottom-container">
-        <div class="info-area" id="info-panel">
+        <div class="info-area" id="info-panel" aria-live="polite">
             <div class="empty-msg">
-                이벤트를 선택하면<br>여기에 상세 정보가 나옵니다!
+                왼쪽 목록이나 달력에서 이벤트를 고르면<br>여기에 상세 정보가 나옵니다.
             </div>
         </div>
         <div class="map-area">
@@ -1039,6 +1158,8 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         korea:    {{ title: 'BanG Dream!<br>한국 오프라인 이벤트 목록',   center: [37.5665, 126.9780], zoom: 11 }},
         overseas: {{ title: 'BanG Dream!<br>해외 오프라인 이벤트 목록',   center: [35.6812, 139.7671], zoom: 4 }}
     }};
+    const EMPTY_INFO = '<div class="empty-msg">왼쪽 목록이나 달력에서 이벤트를 고르면<br>여기에 상세 정보가 나옵니다.</div>';
+    const CAL_BG = '#e4e4e4', CAL_TEXT = '#444', CAL_SEL = '#ff4081';
 
     let currentTab = 'korea';
     let rawEvents = DATASETS[currentTab];
@@ -1046,60 +1167,131 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
     let map = null;
     let calendar = null;
     let markers = [];
+    let currentEvt = null;
+
+    const mq = window.matchMedia('(max-width: 900px)');
+    const isMobile = () => mq.matches;
+
+    // innerHTML 에 넣는 모든 데이터는 이걸 거친다
+    function esc(v) {{
+        return String(v == null ? '' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }}
+    // href 는 http(s) 만 허용
+    function safeUrl(u) {{
+        const s = String(u || '').trim();
+        return /^https?:\/\//i.test(s) ? esc(s) : '#';
+    }}
+    const EXT = 'target="_blank" rel="noopener noreferrer"';
+
+    function calToolbar() {{
+        return isMobile()
+            ? {{ left: 'prev', center: 'title', right: 'next' }}
+            : {{ left: 'prev,next today', center: 'title', right: '' }};
+    }}
 
     document.addEventListener('DOMContentLoaded', function() {{
         filterEventsByCurrentDate();
+        // 카드 목록을 먼저 그린다 (지도/캘린더 CDN 이 실패해도 목록은 보이게)
+        renderCards();
 
         const meta = TAB_META[currentTab];
-        map = L.map('map').setView(meta.center, meta.zoom);
-        L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-            attribution: '© OpenStreetMap'
-        }}).addTo(map);
+        try {{
+            map = L.map('map').setView(meta.center, meta.zoom);
+            L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                attribution: '© OpenStreetMap'
+            }}).addTo(map);
+        }} catch (e) {{ console.warn('지도 초기화 실패', e); map = null; }}
 
-        const calendarEl = document.getElementById('calendar');
-        calendar = new FullCalendar.Calendar(calendarEl, {{
-            initialView: 'dayGridMonth',
-            height: '100%',
-            headerToolbar: {{ left: 'prev,next today', center: 'title', right: '' }},
-            events: getAllCalendarEvents(),
-            eventClick: function(info) {{
-                selectEvent(parseInt(info.event.id));
+        try {{
+            const calendarEl = document.getElementById('calendar');
+            calendar = new FullCalendar.Calendar(calendarEl, {{
+                initialView: 'dayGridMonth',
+                height: isMobile() ? 'auto' : '100%',
+                headerToolbar: calToolbar(),
+                buttonText: {{ today: '오늘' }},
+                fixedWeekCount: false,
+                stickyHeaderDates: false,
+                dayMaxEvents: true,
+                eventBackgroundColor: CAL_BG,
+                eventBorderColor: CAL_BG,
+                eventTextColor: CAL_TEXT,
+                events: getAllCalendarEvents(),
+                eventClick: function(info) {{
+                    selectEvent(parseInt(info.event.id), 'calendar');
+                }}
+            }});
+            calendar.render();
+        }} catch (e) {{ console.warn('캘린더 초기화 실패', e); calendar = null; }}
+
+        const onMq = () => {{
+            if (calendar) {{
+                calendar.setOption('height', isMobile() ? 'auto' : '100%');
+                calendar.setOption('headerToolbar', calToolbar());
             }}
+            if (map) setTimeout(() => map.invalidateSize(), 100);
+        }};
+        if (mq.addEventListener) mq.addEventListener('change', onMq); else mq.addListener(onMq);
+        const fixMap = () => {{ if (map) setTimeout(() => map.invalidateSize(), 200); }};
+        window.addEventListener('resize', fixMap);
+        window.addEventListener('orientationchange', fixMap);
+        window.addEventListener('load', fixMap);
+        fixMap();
+
+        // 상세 패널의 지도 버튼: 인덱스로 좌표를 찾는다 (onclick 문자열 삽입 금지)
+        document.getElementById('info-panel').addEventListener('click', function(e) {{
+            const a = e.target.closest('[data-tidx]');
+            if (!a || !currentEvt) return;
+            const t = currentEvt.map_targets[+a.dataset.tidx];
+            if (t && t.lat && t.lng) zoomToLocation(t.lat, t.lng);
         }});
-        calendar.render();
-        renderCards();
     }});
 
     function switchTab(tab) {{
         if (tab === currentTab) return;
         currentTab = tab;
         rawEvents = DATASETS[tab];
+        currentEvt = null;
 
         // 탭 버튼 / 제목 갱신
         document.querySelectorAll('.tab-btn').forEach(b => {{
-            b.classList.toggle('active', b.dataset.tab === tab);
+            const on = b.dataset.tab === tab;
+            b.classList.toggle('active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
         }});
         document.getElementById('page-title').innerHTML = TAB_META[tab].title;
 
         // 데이터 다시 필터링
         filterEventsByCurrentDate();
+        renderCards();
 
-        // 마커 / 상세 패널 초기화
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
-        document.getElementById('info-panel').innerHTML =
-            '<div class="empty-msg">이벤트를 선택하면<br>여기에 상세 정보가 나옵니다!</div>';
+        document.getElementById('info-panel').innerHTML = EMPTY_INFO;
 
-        // 지도 기본 위치로
-        const meta = TAB_META[tab];
-        map.setView(meta.center, meta.zoom);
-        setTimeout(() => map.invalidateSize(), 100);
+        // 마커 초기화 + 지도 기본 위치로
+        if (map) {{
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            resetMapView();
+            setTimeout(() => map.invalidateSize(), 200);
+        }}
 
         // 캘린더 이벤트 교체
-        calendar.getEvents().forEach(e => e.remove());
-        getAllCalendarEvents().forEach(e => calendar.addEvent(e));
+        if (calendar) {{
+            calendar.getEvents().forEach(e => e.remove());
+            getAllCalendarEvents().forEach(e => calendar.addEvent(e));
+        }}
+    }}
 
-        renderCards();
+    function resetMapView() {{
+        if (!map) return;
+        const meta = TAB_META[currentTab];
+        map.setView(meta.center, meta.zoom);
+    }}
+
+    function parseDay(s) {{
+        const d = new Date(String(s || '') + 'T00:00:00');
+        return isNaN(d) ? null : d;
     }}
 
     function filterEventsByCurrentDate() {{
@@ -1107,29 +1299,39 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
         now.setHours(0, 0, 0, 0);
 
         events = rawEvents.filter(evt => {{
-            const endDate = new Date(evt.end);
+            const endDate = parseDay(evt.end) || new Date(evt.end);
             return endDate >= now;
         }});
-        
+
         console.log(`총 ${{rawEvents.length}}개 중 ${{events.length}}개의 유효 이벤트 로드됨.`);
     }}
 
     function getAllCalendarEvents() {{
         return events.map(e => ({{
-            id: e.id, 
-            title: e.title, 
-            start: e.start, 
-            end: e.cal_end, 
-            color: '#d1d1d1'
+            id: e.id,
+            title: e.title,
+            start: e.start,
+            end: e.cal_end
         }}));
+    }}
+
+    // D-n / 진행중 배지
+    function dayBadge(evt) {{
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const s = parseDay(evt.start), e = parseDay(evt.end) || s;
+        if (!s) return '';
+        if (s <= today && today <= e) return '<span class="card-badge live">진행중</span>';
+        const n = Math.round((s - today) / 86400000);
+        if (n > 0) return `<span class="card-badge${{n <= 7 ? ' soon' : ''}}">D-${{n}}</span>`;
+        return '';
     }}
 
     function renderCards() {{
         const container = document.getElementById('card-list');
-        container.innerHTML = ''; 
-        
+        container.innerHTML = '';
+
         if (events.length === 0) {{
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">진행 중인 이벤트가 없습니다.</div>';
+            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:24px 12px; color:#666; line-height:1.6;">현재 예정된 이벤트가 없습니다.<br>새 행사가 등록되면 이곳에 표시됩니다.</div>';
             return;
         }}
 
@@ -1137,11 +1339,18 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             const card = document.createElement('div');
             card.className = 'event-card';
             card.dataset.id = evt.id;
-            card.onclick = () => selectEvent(evt.id);
+            card.tabIndex = 0;
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', `${{evt.title}} 상세 보기`);
+            card.onclick = () => selectEvent(evt.id, 'card');
+            card.onkeydown = (e) => {{
+                if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); selectEvent(evt.id, 'card'); }}
+            }};
             card.innerHTML = `
-                <div class="card-title">${{evt.title}}</div>
-                <div class="card-date">🗓️ ${{evt.start}} ~ ${{evt.end}}</div>
-                <div class="card-loc">📍 ${{evt.location_text}}</div>
+                ${{dayBadge(evt)}}
+                <div class="card-title">${{esc(evt.title)}}</div>
+                <div class="card-date">🗓️ ${{esc(evt.start)}} ~ ${{esc(evt.end)}}</div>
+                <div class="card-loc">📍 ${{esc(evt.location_text)}}</div>
             `;
             container.appendChild(card);
         }});
@@ -1157,12 +1366,12 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
             if (!m) return;
             secs.push({{ head: m[1].trim(), body: m[2].trim() }});
         }});
-        if (!secs.length) return `<div class="note-text">📢 ${{note}}</div>`;
+        if (!secs.length) return `<div class="note-text">📢 ${{esc(note)}}</div>`;
 
         return secs.map(sec => {{
             let cls = '';
-            if (sec.head.includes('22')) cls = ' is-sat';
-            else if (sec.head.includes('23')) cls = ' is-sun';
+            if (/\(토\)|토요일/.test(sec.head)) cls = ' is-sat';
+            else if (/\(일\)|일요일/.test(sec.head)) cls = ' is-sun';
             else if (sec.head.includes('판매')) cls = ' is-shop';
 
             const items = sec.body
@@ -1170,122 +1379,152 @@ def generate_final_page(korea_csv, overseas_csv, output_filename):
                 .map(s => s.trim().replace(/^[·\s]+|[·\s]+$/g, ''))
                 .filter(Boolean)
                 .map(s => {{
-                    const caveat = s.startsWith('※') ? ' is-caveat' : '';
+                    const caveat = s.startsWith('※') ? 'is-caveat' : '';
                     // 맨 앞의 시각 표기(12:30~, 10:00, ★15:00~ 등)를 강조
-                    const html = s.replace(
+                    const html = esc(s).replace(
                         /^(★?\s*\d{{1,2}}:\d{{2}}\s*~?)/,
                         '<span class="note-time">$1</span>'
                     );
-                    return `<li class="${{caveat.trim()}}">${{html}}</li>`;
+                    return `<li class="${{caveat}}">${{html}}</li>`;
                 }})
                 .join('');
-            return `<div class="note-sec${{cls}}"><h4>${{sec.head}}</h4><ul>${{items}}</ul></div>`;
+            return `<div class="note-sec${{cls}}"><h4>${{esc(sec.head)}}</h4><ul>${{items}}</ul></div>`;
         }}).join('');
     }}
 
-    function selectEvent(id) {{
+    // 카드 목록 안에서 해당 카드가 보이도록
+    function revealCard(card) {{
+        if (!card) return;
+        if (!isMobile()) {{ card.scrollIntoView({{ block: 'nearest' }}); return; }}
+        // 모바일: 페이지 전체가 튀지 않도록 목록 컨테이너만 스크롤
+        const box = document.getElementById('card-list-container');
+        const top = card.offsetTop - box.offsetTop;
+        if (top < box.scrollTop) box.scrollTop = top;
+        else if (top + card.offsetHeight > box.scrollTop + box.clientHeight)
+            box.scrollTop = top + card.offsetHeight - box.clientHeight;
+    }}
+
+    function selectEvent(id, from) {{
         const evt = events.find(e => e.id === id);
         if (!evt) return;
+        currentEvt = evt;
 
         document.querySelectorAll('.event-card').forEach(c => c.classList.remove('active'));
-        document.querySelector(`.event-card[data-id="${{id}}"]`)?.classList.add('active');
+        const card = document.querySelector(`.event-card[data-id="${{id}}"]`);
+        if (card) {{
+            card.classList.add('active');
+            if (from !== 'card') revealCard(card);
+        }}
 
-        const allCalEvents = calendar.getEvents();
-        allCalEvents.forEach(calEvt => {{
-            if (parseInt(calEvt.id) === id) {{
-                calEvt.setProp('color', '#ff4081');
-            }} else {{
-                calEvt.setProp('color', '#d1d1d1');
-            }}
-        }});
-        calendar.gotoDate(evt.start);
+        if (calendar) {{
+            calendar.getEvents().forEach(calEvt => {{
+                const sel = parseInt(calEvt.id) === id;
+                calEvt.setProp('backgroundColor', sel ? CAL_SEL : CAL_BG);
+                calEvt.setProp('borderColor', sel ? CAL_SEL : CAL_BG);
+                calEvt.setProp('textColor', sel ? '#fff' : CAL_TEXT);
+            }});
+            if (from !== 'calendar') calendar.gotoDate(evt.start);
+        }}
 
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
-        let bounds = L.latLngBounds();
-        let hasCoords = false;
+        if (map) {{
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            let bounds = L.latLngBounds();
+            let hasCoords = false;
 
-        evt.map_targets.forEach(target => {{
-            if (target.lat && target.lng) {{
-                const marker = L.marker([target.lat, target.lng]).addTo(map);
-                marker.bindPopup(`<b>${{target.name}}</b>`);
-                markers.push(marker);
-                bounds.extend([target.lat, target.lng]);
-                hasCoords = true;
-            }}
-        }});
+            evt.map_targets.forEach(target => {{
+                if (target.lat && target.lng) {{
+                    const marker = L.marker([target.lat, target.lng]).addTo(map);
+                    marker.bindPopup(`<b>${{esc(target.name)}}</b>`);
+                    marker.on('click', () => revealCard(document.querySelector(`.event-card[data-id="${{id}}"]`)));
+                    markers.push(marker);
+                    bounds.extend([target.lat, target.lng]);
+                    hasCoords = true;
+                }}
+            }});
 
-        setTimeout(() => {{
-            map.invalidateSize();
-            if (hasCoords) {{
-                map.fitBounds(bounds, {{ padding: [50, 50], maxZoom: 14 }});
-            }}
-        }}, 100);
+            setTimeout(() => {{
+                map.invalidateSize();
+                if (hasCoords) {{
+                    map.fitBounds(bounds, {{ padding: [50, 50], maxZoom: 14 }});
+                }} else {{
+                    resetMapView();
+                }}
+            }}, 200);
+        }}
 
         const panel = document.getElementById('info-panel');
-        let btnsHtml = '<div class="btn-group">';
-        
-        evt.map_targets.forEach(target => {{
-            const zoomAttr = (target.lat && target.lng) 
-                ? `onclick="zoomToLocation(${{target.lat}}, ${{target.lng}})"` 
-                : '';
-            
-            if (target.n_link) {{
-                btnsHtml += `<a href="${{target.n_link}}" target="_blank" class="btn btn-naver" ${{zoomAttr}}><span>N 네이버지도 (${{target.name}})</span> <span>➚</span></a>`;
+
+        // 지도 버튼 (맨 아래)
+        let btnsHtml = '';
+        evt.map_targets.forEach((target, ti) => {{
+            if (target.lat && target.lng) {{
+                btnsHtml += `<button type="button" class="btn btn-zoom" data-tidx="${{ti}}"><span>📍 ${{esc(target.name)}} 지도에서 보기</span></button>`;
             }}
-            
+            if (target.n_link) {{
+                btnsHtml += `<a href="${{safeUrl(target.n_link)}}" ${{EXT}} class="btn btn-naver"><span>N 네이버지도 (${{esc(target.name)}})</span> <span aria-hidden="true">➚</span></a>`;
+            }}
             if (target.k_link) {{
-                btnsHtml += `<a href="${{target.k_link}}" target="_blank" class="btn btn-kakao" ${{zoomAttr}}><span>K 카카오맵 (${{target.name}})</span> <span>➚</span></a>`;
+                btnsHtml += `<a href="${{safeUrl(target.k_link)}}" ${{EXT}} class="btn btn-kakao"><span>K 카카오맵 (${{esc(target.name)}})</span> <span aria-hidden="true">➚</span></a>`;
             }}
         }});
-        btnsHtml += '</div>';
+        if (btnsHtml) btnsHtml = `<div class="btn-group">${{btnsHtml}}</div>`;
 
         let noteHtml = evt.note ? formatNote(evt.note) : '';
         let goodsBtnHtml = evt.has_goods
-            ? `<button onclick="openGoodsModal()" class="btn-super-main" style="background:linear-gradient(135deg,#7b4fff,#a17bff); margin-top:auto;">🛒 굿즈 · 메뉴 계산기 열기</button>`
+            ? `<button type="button" onclick="openGoodsModal()" class="btn-super-main" style="background:linear-gradient(135deg,#7b4fff,#a17bff);">🛒 굿즈 · 메뉴 계산기 열기</button>`
             : '';
         if (evt.has_cgf) {{
-            goodsBtnHtml = `<button onclick="openCgModal()" class="btn-super-main" style="background:linear-gradient(135deg,#38b6ff,#b39bff 55%,#ff7fc4); margin-top:auto;">🛸 무겐다이 뮤타입 물판 · 사인회 추첨 계산기</button>`;
+            goodsBtnHtml = `<button type="button" onclick="openCgModal()" class="btn-super-main" style="background:linear-gradient(135deg,#38b6ff,#b39bff 55%,#ff7fc4);">🛸 무겐다이 뮤타입 물판 · 사인회 추첨 계산기</button>`;
         }}
         if (evt.has_cw) {{
-            goodsBtnHtml = `<button onclick="openCwModal()" class="btn-super-main" style="background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1); margin-top:auto;">🎪 부스 굿즈 · 현장 이벤트 가이드 (ZA02)</button>`;
+            goodsBtnHtml = `<button type="button" onclick="openCwModal()" class="btn-super-main" style="background:linear-gradient(135deg,#6a5cff,#c07bff 55%,#ff8ad1);">🎪 부스 굿즈 · 현장 이벤트 가이드 (ZA02)</button>`;
         }}
+        if (goodsBtnHtml) goodsBtnHtml = `<div class="goods-block">${{goodsBtnHtml}}</div>`;
+
         // "공지 이미지 N" 류는 본 버튼이 아니라 곁다리이므로 따로 모아 작은 칩으로 한 줄에 깐다
         const isImgLink = m => /^공지 이미지/.test(m.label || '');
         const normalLinks = (evt.main_links || []).filter(m => !isImgLink(m));
         const imgLinks = (evt.main_links || []).filter(isImgLink);
         // 링크가 많은 행사는 버튼을 작게(btn-mini) — 안 그러면 버튼 벽이 된다
         const manyLinks = normalLinks.length > 3;
-        let mainLinkHtml = normalLinks.map((m, i) => {{
-            const label = m.label ? `👉 ${{m.label}}` : '👉 통합 정보 확인하기';
-            const mt = (evt.has_goods || evt.has_cw || evt.has_cgf || i > 0) ? 'margin-top:8px;' : '';
+        let ticketHtml = (evt.ticket_links || []).map(m => {{
+            const label = m.label ? `🎟️ ${{esc(m.label)}} 예매하러 가기` : '🎟️ 예매하러 가기';
+            return `<a href="${{safeUrl(m.url)}}" ${{EXT}} class="btn btn-super-main btn-ticket">${{label}}</a>`;
+        }}).join('');
+        let mainLinkHtml = normalLinks.map(m => {{
+            const label = m.label ? `👉 ${{esc(m.label)}}` : '👉 통합 정보 확인하기';
             const mini = manyLinks ? ' btn-mini' : '';
-            return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main${{mini}}" style="${{mt}}">${{label}}</a>`;
+            return `<a href="${{safeUrl(m.url)}}" ${{EXT}} class="btn btn-super-main${{mini}}">${{label}}</a>`;
         }}).join('');
         if (imgLinks.length) {{
             mainLinkHtml += `<div class="img-chip-row">`
                 + `<span class="img-chip-head">🖼 공식 공지 원본 이미지</span>`
                 + imgLinks.map((m, i) => {{
                     const n = (m.label.match(/\d+/) || [i + 1])[0];
-                    return `<a href="${{m.url}}" target="_blank" class="img-chip" title="${{m.label}} 원본 열기 (X 로그인 불필요)">${{n}}번째</a>`;
+                    return `<a href="${{safeUrl(m.url)}}" ${{EXT}} class="img-chip" title="${{esc(m.label)}} 원본 열기 (X 로그인 불필요)">${{esc(n)}}번째</a>`;
                 }}).join('') + `</div>`;
         }}
-        let ticketHtml = (evt.ticket_links || []).map(m => {{
-            const label = m.label ? `🎟️ ${{m.label}} 예매하러 가기` : '🎟️ 예매하러 가기';
-            return `<a href="${{m.url}}" target="_blank" class="btn btn-super-main btn-ticket" style="margin-top:10px;">${{label}}</a>`;
-        }}).join('');
+        const linkBlock = (ticketHtml || mainLinkHtml) ? `<div class="link-block">${{ticketHtml}}${{mainLinkHtml}}</div>` : '';
 
+        const dateTxt = evt.start === evt.end ? evt.start : `${{evt.start}} ~ ${{evt.end}}`;
         panel.innerHTML = `
-            <div class="panel-header">${{evt.title}}</div>
+            <div class="panel-header">${{esc(evt.title)}}</div>
+            <div class="panel-meta">🗓️ ${{esc(dateTxt)}}<br>📍 ${{esc(evt.location_text)}}</div>
+            ${{linkBlock}}
+            ${{goodsBtnHtml}}
             ${{noteHtml}}
             ${{btnsHtml}}
-            ${{goodsBtnHtml}}
-            ${{mainLinkHtml}}
-            ${{ticketHtml}}
         `;
+        panel.scrollTop = 0;
+
+        if (from === 'card' && isMobile()) {{
+            panel.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+        }}
     }}
 
     function zoomToLocation(lat, lng) {{
+        if (!map) return;
         map.flyTo([lat, lng], 17, {{ animate: true, duration: 1.5 }});
     }}
     {goods_js}
